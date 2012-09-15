@@ -1,0 +1,5 @@
+/.coverage
+/cov_html
+/Tendril.egg-info
+*.egg
+*.py[co]
