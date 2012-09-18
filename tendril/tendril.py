@@ -15,8 +15,14 @@
 ## <http://www.gnu.org/licenses/>.
 
 import abc
+import collections
 
-from tendril import framer
+from tendril import framers
+
+
+TendrilFramers = collections.namedtuple('TendrilFramers', ['send', 'recv'])
+TendrilFramerStates = collections.namedtuple('TendrilFramerStates',
+                                             ['send', 'recv'])
 
 
 class Tendril(object):
@@ -61,31 +67,35 @@ class Tendril(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, manager, addr):
+    default_framer = framers.IdentityFramer
+
+    def __init__(self, manager, local_addr, remote_addr):
         """
         Initialize a Tendril.
 
         :param manager: The TendrilManager responsible for the
                         Tendril.
-        :param addr: The address of the remote end of the connection
-                     represented by the Tendril.
+        :param local_addr: The address of the local end of the
+                           connection represented by the Tendril.
+        :param remote_addr: The address of the remote end of the
+                            connection represented by the Tendril.
         """
 
         self.manager = manager
         self.endpoint = manager.endpoint
-        self.addr = addr
+        self.local_addr = local_addr
+        self.remote_addr = remote_addr
 
         self._state = None
-        self._error = None
 
         # Set the initial framer
-        f = framer.IdentityFramer()
-        self._recv_framer = f
+        f = self.default_framer()
         self._send_framer = f
+        self._recv_framer = f
 
         # Set up state for the framer
-        self._recv_framer_state = framer.FramerState()
-        self._send_framer_state = framer.FramerState()
+        self._send_framer_state = framers.FramerState()
+        self._recv_framer_state = framers.FramerState()
 
     def wrap(self, wrapper, *args, **kwargs):
         """
@@ -103,17 +113,63 @@ class Tendril(object):
 
         raise NotImplementedError("Cannot wrap this connection")
 
-    @property
-    def error(self):
+    def close(self):
+        """Close the connection."""
+
+        # Close the connection, but do not call the closed() method.
+        self._close()
+
+    def closed(self, error=None):
         """
-        Retrieve the last error seen on the tendril.  Will clear the
-        error condition as well.
+        Notify the application that the connection has been closed.
+
+        :param error: The exception which has caused the connection to
+                      be closed.  If the connection has been closed
+                      due to an EOF, pass ``None``.
         """
 
-        try:
-            return self._error
-        finally:
-            self._error = None
+        if self._state:
+            self._state.closed(error)
+
+    @property
+    def send_framer(self):
+        """
+        Retrieve the framer in use for the sending side of the
+        connection.
+        """
+
+        return self._send_framer
+
+    @send_framer.setter
+    def send_framer(self, value):
+        """
+        Set the framer in use for the sending side of the connection.
+        The framer state will be reset next time the framer is used.
+        """
+
+        if not isinstance(value, framers.Framer):
+            raise ValueError("framer must be an instance of tendril.Framer")
+
+        self._send_framer = value
+
+    @send_framer.deleter
+    def send_framer(self):
+        """
+        Reset the framer in use for the sending side of the connection
+        to be a tendril.IdentityFramer.  The framer state will be
+        reset next time the framer is used.
+        """
+
+        self._send_framer = self.default_framer()
+
+    @property
+    def send_framer_state(self):
+        """
+        Retrieve the framer state in use for the sending side of the
+        connection.
+        """
+
+        return self._send_framer_state
 
     @property
     def recv_framer(self):
@@ -132,7 +188,7 @@ class Tendril(object):
         framer is used.
         """
 
-        if not isinstance(value, framer.Framer):
+        if not isinstance(value, framers.Framer):
             raise ValueError("framer must be an instance of tendril.Framer")
 
         self._recv_framer = value
@@ -145,38 +201,72 @@ class Tendril(object):
         will be reset next time the framer is used.
         """
 
-        self._recv_framer = framer.IdentityFramer()
+        self._recv_framer = self.default_framer()
 
     @property
-    def send_framer(self):
+    def recv_framer_state(self):
         """
-        Retrieve the framer in use for the sending side of the
+        Retrieve the framer state in use for the receiving side of the
         connection.
         """
 
-        return self._send_framer
+        return self._recv_framer_state
 
-    @send_framer.setter
-    def send_framer(self, value):
+    @property
+    def framers(self):
         """
-        Set the framer in use for the sending side of the connection.
-        The framer state will be reset next time the framer is used.
-        """
-
-        if not isinstance(value, framer.Framer):
-            raise ValueError("framer must be an instance of tendril.Framer")
-
-        self._send_framer = value
-
-    @send_framer.deleter
-    def send_framer(self):
-        """
-        Reset the framer in use for the sending side of the connection
-        to be a tendril.IdentityFramer.  The framer state will be
-        reset next time the framer is used.
+        Retrieve the framers in use for the connection.
         """
 
-        self._send_framer = framer.IdentityFramer()
+        return TendrilFramers(self._send_framer, self._recv_framer)
+
+    @framers.setter
+    def framers(self, value):
+        """
+        Set the framers in use for the connection.  The framer states
+        will be reset next time their respective framer is used.
+        """
+
+        # Handle sequence values
+        elif isinstance(value, collections.Sequence):
+            if len(value) != 2:
+                raise ValueError('need exactly 2 values to unpack')
+            elif (not isinstance(value[0], framers.Framer) or
+                  not isinstance(value[1], framers.Framer)):
+                raise ValueError("framer must be an instance of "
+                                 "tendril.Framer")
+
+            self._send_framer, self._recv_framer = value
+
+        # If we have a single value, assume it's a framer
+        else:
+            if not isinstance(value, framers.Framer):
+                raise ValueError("framer must be an instance of "
+                                 "tendril.Framer")
+
+            self._send_framer = value
+            self._recv_framer = value
+
+    @framers.deleter
+    def framers(self):
+        """
+        Reset the framers in use for the connection to be a
+        tendril.IdentityFramer.  The framer states will be reset next
+        time their respective framer is used.
+        """
+
+        f = self.default_framer()
+        self._send_framer = f
+        self._recv_framer = f
+
+    @property
+    def framer_states(self):
+        """
+        Retrieve the framer states in use for the connection.
+        """
+
+        return TendrilFramerStates(self._send_framer_state,
+                                   self._recv_framer_state)
 
     @property
     def state(self):
@@ -212,12 +302,13 @@ class Tendril(object):
         pass
 
     @abc.abstractmethod
-    def close(self):
-        """Close the connection."""
+    def _close(self):
+        """
+        Close the connection.  Must not call the ``closed()`` method;
+        that will be taken care of at a higher layer.
+        """
 
-        # Make sure the state is notified of the closure.
-        if self._state:
-            self._state.close(self)
+        pass
 
     @abc.abstractproperty
     def proto(self):

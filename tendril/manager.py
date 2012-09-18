@@ -133,7 +133,7 @@ class TendrilManager(object):
         except KeyError:
             pass
 
-    def start(self, acceptor=None, wrapper=None, *args, **kwargs):
+    def start(self, acceptor=None, wrapper=None):
         """
         Starts the TendrilManager.
 
@@ -145,12 +145,14 @@ class TendrilManager(object):
                          not given, no new connections will be
                          accepted by the TendrilManager.
         :param wrapper: A callable taking, as its first argument, a
-                        socket.socket object.  All other positional
-                        and keyword arguments will be passed to this
-                        wrapping callable.  The callable must return a
-                        valid proxy for the socket.socket object,
-                        which will subsequently be used to communicate
-                        on the connection.
+                        socket.socket object.  The callable must
+                        return a valid proxy for the socket.socket
+                        object, which will subsequently be used to
+                        communicate on the connection.
+
+        For passing extra arguments to the acceptor or the wrapper,
+        see the ``TendrilPartial`` class; for chaining together
+        multiple wrappers, see the ``WrapperChain`` class.
         """
 
         # Don't allow a double-start
@@ -225,7 +227,7 @@ class TendrilManager(object):
         return (self.proto, self.endpoint)
 
     @abc.abstractmethod
-    def connect(self, target, acceptor, wrapper=None, *args, **kwargs):
+    def connect(self, target, acceptor, wrapper=None):
         """
         Initiate a connection from the tendril manager's endpoint.
         Once the connection is completed, a Tendril object will be
@@ -236,19 +238,21 @@ class TendrilManager(object):
         :param acceptor: A callable which will initialize the state of
                          the new Tendril object.
         :param wrapper: A callable taking, as its first argument, a
-                        socket.socket object.  All other positional
-                        and keyword arguments will be passed to this
-                        wrapping callable.  The callable must return a
-                        valid proxy for the socket.socket object,
-                        which will subsequently be used to communicate
-                        on the connection.
+                        socket.socket object.  The callable must
+                        return a valid proxy for the socket.socket
+                        object, which will subsequently be used to
+                        communicate on the connection.
+
+        For passing extra arguments to the acceptor or the wrapper,
+        see the ``TendrilPartial`` class; for chaining together
+        multiple wrappers, see the ``WrapperChain`` class.
         """
 
         if not self.running:
             raise ValueError("TendrilManager not running")
 
     @abc.abstractmethod
-    def listener(self, acceptor, wrapper, args, kwargs):
+    def listener(self, acceptor, wrapper):
         """
         Listens for new connections to the manager's endpoint.  Once a
         new connection is received, a Tendril object is generated
@@ -269,9 +273,6 @@ class TendrilManager(object):
                         return a valid proxy for the socket.socket
                         object, which will subsequently be used to
                         communicate on the connection.
-        :param args: A sequence of arguments to pass to the wrapper.
-        :param kwargs: A dictionary of keyword arguments to pass to
-                       the wrapper.
         """
 
         pass

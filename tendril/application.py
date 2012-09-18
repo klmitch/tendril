@@ -17,27 +17,50 @@
 import abc
 
 
-class ApplicationState(object):
+class Application(object):
     """
-    Base class for tracking application state.  Application state
-    classes are responsible for implementing the base methods
-    documented here.
+    Base class for tracking application state.  Application classes
+    are responsible for implementing the base methods documented here.
     """
 
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self, parent):
+        """
+        Initialize the Application.
+        """
+
+        self.parent = parent
+
+    def close(self):
+        """
+        Close the connection.
+        """
+
+        self.parent.close()
+
+    def send_frame(self, frame):
+        """
+        Send a frame across a connection.
+        """
+
+        self.parent.send_frame(frame)
+
     @abc.abstractmethod
-    def close(self, tend):
+    def closed(self, error):
         """
         Called to notify the application that the connection has been
-        closed.  The Tendril object may be consulted for any error
-        conditions that may have resulted in the closure.
+        closed.  Not called if the application initiates the closure.
+
+        :param error: The exception resulting in the connection
+                      closure.  If the closure is due to an EOF
+                      condition, will be ``None``.
         """
 
         pass
 
     @abc.abstractmethod
-    def recv_frame(self, tend, frame):
+    def recv_frame(self, frame):
         """
         Called to pass received frames to the application.
         """
