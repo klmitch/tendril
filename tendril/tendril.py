@@ -228,7 +228,7 @@ class Tendril(object):
         """
 
         # Handle sequence values
-        elif isinstance(value, collections.Sequence):
+        if isinstance(value, collections.Sequence):
             if len(value) != 2:
                 raise ValueError('need exactly 2 values to unpack')
             elif (not isinstance(value[0], framers.Framer) or
