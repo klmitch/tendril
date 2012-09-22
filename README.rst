@@ -1,0 +1,117 @@
+==============================================
+Tendril Frame-based Network Connection Tracker
+==============================================
+
+Tendril is a network communication library based on two main features:
+it is based on sending and receiving frames, and it tracks the state
+of an abstract connection as defined by the application.  Tendril is
+designed to be easy to use: creating an application requires
+subclassing the ``Application`` class and providing an implementation
+for the recv_frame() method; then get a ``TendrilManager`` class
+instance and start it, and Tendril manages the rest.
+
+Frames
+======
+
+Tendril is based on the concept of passing around frames or packets of
+data.  The fact is, most network protocols are based on sending and
+receiving frames; for instance, in the SMTP protocol used for sending
+email, the sender will start off sending the frame "MAIL FROM
+email@example.com" followed by a line termination sequence (a carriage
+return followed by a newline).  The SMTP server will then respond with
+another frame acknowledging the "MAIL FROM" frame, and that frame will
+also end with a line termination sequence.  Thus, even though SMTP is
+defined on top of the TCP protocol, which provides an undivided stream
+of data between the client and server, a framing boundary is imposed
+upon it--in this case, the carriage return followed by a newline that
+terminates each frame.
+
+Tendril includes the concept of *framers*.  A framer is nothing more
+than a subclass of ``Framer`` which has one method which extracts a
+single frame from the stream of undifferentiated data, and another
+method which converts a frame into an appropriate representation.  In
+the case of the SMTP protocol exchange above, the ``frameify()``
+method finds each line terminated by the carriage return-newline pair,
+strips off those characters, and returns just the frame.  In the same
+way, the corresponding ``streamify()`` method takes the frame and
+appends a carriage return-newline pair.
+
+For text-based protocols such as SMTP, this may seem like overkill.
+However, for binary-based protocols, a lot of code is dedicated to
+determining the boundaries between frames, and in some cases even
+decoding the frame.  Tendril's concept of a framer for a connection
+enables the framing logic to be isolated from the rest of the
+application, and even reused: Tendril comes with several pre-built
+framers, including framers designed to work with a text-based protocol
+such as SMTP.
+
+Another important advantage of the framer concept is the ability to
+switch between framers as needed.  Taking again the example of the
+SMTP protocol--the actual email data is transferred to the server by
+the client first sending a "DATA" frame; the server responds
+indicating that it is ready to begin receiving the message data, and
+then the client simply sends the message data, ending it with a line
+containing only a single period (".").  In this case, an SMTP server
+application based on Tendril may wish to receive the message data as a
+single frame; it can do this by creating a framer which buffers stream
+data until it sees that ending sentinel (the period on a line by
+itself), then returns the whole message as a single frame.  Once the
+server receives the "DATA" frame from the client, all it has to do is
+temporarily switch out the framer in use for the receiving side of the
+connection, then switch it back to the standard line-based framer once
+it has received the message frame.
+
+Tendril allows for different framers to be used on the receiving side
+and sending side of the connection.  This could be used in a case like
+the SMTP server example cited above, where the server still wishes to
+send line-oriented frames to the client, even while buffering a
+message data frame.  In addition, although the provided framers deal
+with byte data, Tendril itself treats the frames as opaque;
+applications can use this to build a framer that additionally parses a
+given frame into a class object that the rest of the application then
+processes as necessary.
+
+Connection Tracking
+===================
+
+Tendril is also based on the concept of tracking connection state.
+For connection-oriented protocols such as TCP, obviously, this is not
+a big problem; however, Tendril is also designed to support
+connectionless protocols such as UDP, where some applications need to
+manage state information relevant to a given exchange.  As an
+admittedly contrived example, consider DNS, which is based on UDP.  A
+client of the DNS system will send a request to a DNS server over UDP;
+when a response is received from that DNS server, the connection state
+information tracked by Tendril can help connect that response with the
+appropriate request, ensuring that the response goes to the right
+place.
+
+This connection state tracking is primarily intended to assist
+applications which desire to be available over both
+connection-oriented protocols such as TCP and over connectionless
+protocols such as UDP.  Although Tendril does not address reliability
+or frame ordering, its connection state tracking eases the
+implementation of an application which utilizes both types of
+protocols.
+
+Extensibility
+=============
+
+Careful readers may have noticed the use of the terms, "such as TCP"
+and "such as UDP."  Although Tendril only has built-in support for TCP
+and UDP connections, it is possible to extend Tendril to support other
+protocols.  All that is required is to create subclasses of
+``Tendril`` (representing an individual connection) and of
+``TendrilManager`` (which accepts and creates connections and manages
+any necessary socket data flows), and to register the
+``TendrilManager`` subclasses as ``pkg_resources`` entry points under
+the ``tendril.manager`` namespace.  See the ``setup.py`` for Tendril
+for an example of how this may be done.
+
+In addition to allowing Tendril to support protocols other than TCP
+and UDP, it is also possible to implement new framers by subclassing
+the ``Framer`` class.  (Note: as Tendril deals with ``Framer``
+objects, it is not necessary to register these framers using
+``pkg_resources`` entry points.)  Objects of these classes may then
+simply be assigned to the appropriate ``framers`` attribute on the
+``Tendril`` instance representing the connection.

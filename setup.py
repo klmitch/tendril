@@ -12,7 +12,7 @@ setup(
     author='Kevin L. Mitchell',
     author_email='klmitch@mit.edu',
     url='http://github.com/klmitch/tendril',
-    description='Frame-based Connection Framework',
+    description='Frame-based Network Connection Tracker',
     long_description=readfile('README.rst'),
     classifiers=[
         'Development Status :: 3 - Alpha',
