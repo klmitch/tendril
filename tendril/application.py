@@ -46,7 +46,6 @@ class Application(object):
 
         self.parent.send_frame(frame)
 
-    @abc.abstractmethod
     def closed(self, error):
         """
         Called to notify the application that the connection has been
