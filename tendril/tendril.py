@@ -82,7 +82,6 @@ class Tendril(object):
         """
 
         self.manager = manager
-        self.endpoint = manager.endpoint
         self.local_addr = local_addr
         self.remote_addr = remote_addr
 
