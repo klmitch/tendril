@@ -39,6 +39,7 @@ class TendrilManager(object):
     __metaclass__ = abc.ABCMeta
 
     _managers = weakref.WeakValueDictionary()
+    _tendrils = {}
     _running_managers = {}
 
     @classmethod
@@ -81,6 +82,23 @@ class TendrilManager(object):
             raise ValueError("unknown protocol %r" % proto)
 
         return manager_cls(endpoint)
+
+    @classmethod
+    def find_tendril(cls, proto, addr):
+        """
+        Finds the tendril corresponding to the protocol and address
+        tuple.  Returns the Tendril object, or raises KeyError if the
+        tendril is not tracked.
+
+        The address tuple is the tuple of the local address and the
+        remote address for the tendril.
+        """
+
+        # First, normalize the proto
+        proto = proto.tolower()
+
+        # Now, find and return the tendril
+        return cls._tendrils[proto][addr]
 
     def __init__(self, endpoint=None):
         """
@@ -126,6 +144,10 @@ class TendrilManager(object):
 
         self.tendrils[tendril._tendril_key] = tendril
 
+        # Also add to _tendrils
+        self._tendrils.setdefault(tendril.proto, weakref.WeakValueDictionary())
+        self._tendrils[tendril.proto][tendril._tendril_key] = tendril
+
     def _untrack_tendril(self, tendril):
         """
         Removes the tendril from the set of tracked tendrils.
@@ -133,6 +155,12 @@ class TendrilManager(object):
 
         try:
             del self.tendrils[tendril._tendril_key]
+        except KeyError:
+            pass
+
+        # Also remove from _tendrils
+        try:
+            del self._tendrils[tendril.proto][tendril._tendril_key]
         except KeyError:
             pass
 
@@ -288,3 +316,4 @@ class TendrilManager(object):
 
 
 get_manager = TendrilManager.get_manager
+find_tendril = TendrilManager.find_tendril
