@@ -173,10 +173,11 @@ Acceptors
 An *acceptor* is simply a callable taking a single argument--the
 ``Tendril`` instance representing the connection--and returning an
 instance of a subclass of ``Application``, which will be assigned to
-the ``state`` attribute of the ``Tendril`` instance.  The acceptor
-initializes the application; it also has the opportunity to manipulate
-that ``Tendril``, such as setting framers, calling the ``Tendril``
-instance's ``wrap()`` method, or simply closing the connection.
+the ``application`` attribute of the ``Tendril`` instance.  The
+acceptor initializes the application; it also has the opportunity to
+manipulate that ``Tendril``, such as setting framers, calling the
+``Tendril`` instance's ``wrap()`` method, or simply closing the
+connection.
 
 Although the ``TendrilManager`` does not provide the opportunity to
 pass arguments to the acceptor, it is certainly possible to do so.

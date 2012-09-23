@@ -43,10 +43,9 @@ class Tendril(object):
     ``addr``
       The address of the remote socket, as a (host, port) tuple.
 
-    ``state``
-
-      The application-provided state.  May be set by the application.
-      Should be a subclass of ``tendril.ApplicationState``.
+    ``application``
+      The application object.  May be changed by the application.
+      Should be a subclass of ``tendril.Application``.
 
     ``recv_framer``
       An instance of a class which chops a received stream into a
@@ -85,7 +84,7 @@ class Tendril(object):
         self.local_addr = local_addr
         self.remote_addr = remote_addr
 
-        self._state = None
+        self._application = None
 
         # Set the initial framer
         f = self.default_framer()
@@ -125,8 +124,8 @@ class Tendril(object):
                       due to an EOF, pass ``None``.
         """
 
-        if self._state:
-            self._state.closed(error)
+        if self._application:
+            self._application.closed(error)
 
     @property
     def _tendril_key(self):
@@ -274,31 +273,31 @@ class Tendril(object):
                                    self._recv_framer_state)
 
     @property
-    def state(self):
-        """Retrieve the current application state."""
+    def application(self):
+        """Retrieve the current application."""
 
-        return self._state
+        return self._application
 
-    @state.setter
-    def state(self, value):
-        """Set the value of the application state."""
+    @application.setter
+    def application(self, value):
+        """Update the application."""
 
         # Always allow None
         if value is None:
-            self._state = None
+            self._application = None
 
         # Check that the state is valid
         if not isinstance(value, application.Application):
-            raise ValueError("application state must be an instance of "
+            raise ValueError("application must be an instance of "
                              "tendril.Application")
 
-        self._state = value
+        self._application = value
 
-    @state.deleter
-    def state(self):
+    @application.deleter
+    def application(self):
         """Clear the application state."""
 
-        self._state = None
+        self._application = None
 
     @abc.abstractmethod
     def send_frame(self, frame):
