@@ -17,6 +17,7 @@
 import abc
 import collections
 
+from tendril import application
 from tendril import framers
 
 
@@ -285,6 +286,7 @@ class Tendril(object):
         # Always allow None
         if value is None:
             self._application = None
+            return
 
         # Check that the state is valid
         if not isinstance(value, application.Application):
