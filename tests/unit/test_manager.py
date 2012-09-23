@@ -197,13 +197,20 @@ class TestTendrilManager(unittest.TestCase):
     def test_connect_notrunning(self):
         tm = ManagerForTest()
 
-        self.assertRaises(ValueError, tm.connect, 'target', 'acceptor')
+        self.assertRaises(ValueError, tm.connect, ('127.0.0.1', 8080),
+                          'acceptor')
+
+    def test_connect_familymismatch(self):
+        tm = ManagerForTest()
+        tm.running = True
+
+        self.assertRaises(ValueError, tm.connect, ('::1', 8080), 'acceptor')
 
     def test_connect_running(self):
         tm = ManagerForTest()
         tm.running = True
 
-        tm.connect('target', 'acceptor')
+        tm.connect(('127.0.0.1', 8080), 'acceptor')
 
         # Note: verifying that an exception is not raised
 

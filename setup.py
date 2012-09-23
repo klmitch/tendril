@@ -22,6 +22,7 @@ setup(
     packages=['tendril'],
     requires=[
         "gevent",
+        "netaddr",
         "pkg_resources",
         ],
     tests_require=[

@@ -15,9 +15,12 @@
 ## <http://www.gnu.org/licenses/>.
 
 import collections
+import socket
+
+import netaddr
 
 
-__all__ = ["TendrilPartial", "WrapperChain"]
+__all__ = ["TendrilPartial", "WrapperChain", "addr_info"]
 
 
 class TendrilPartial(object):
@@ -104,3 +107,51 @@ class WrapperChain(object):
 
         # For convenience...
         return self
+
+
+def addr_info(addr):
+    """
+    Interprets an address in standard tuple format to determine if it
+    is valid, and, if so, which socket family it is.  Returns the
+    socket family.
+    """
+
+    # If it's a string, it's in the UNIX family
+    if isinstance(addr, basestring):
+        return socket.AF_UNIX
+
+    # Verify that addr is a tuple
+    if not isinstance(addr, collections.Sequence):
+        raise ValueError("address is not a tuple")
+
+    # Make sure it has at least 2 fields
+    if len(addr) < 2:
+        raise ValueError("cannot understand address")
+
+    # Sanity-check the port number
+    if not (0 <= addr[1] < 65536):
+        raise ValueError("cannot understand port number")
+
+    # OK, first field should be an IP address; suck it out...
+    ipaddr = addr[0]
+
+    # Empty string means IPv4
+    if not ipaddr:
+        if len(addr) != 2:
+            raise ValueError("cannot understand address")
+
+        return socket.AF_INET
+
+    # See if it's valid...
+    if netaddr.valid_ipv6(ipaddr):
+        if len(addr) > 4:
+            raise ValueError("cannot understand address")
+
+        return socket.AF_INET6
+    elif netaddr.valid_ipv4(ipaddr):
+        if len(addr) != 2:
+            raise ValueError("cannot understand address")
+
+        return socket.AF_INET
+
+    raise ValueError("cannot understand address")

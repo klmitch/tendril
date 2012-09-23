@@ -14,6 +14,7 @@
 ## along with this program.  If not, see
 ## <http://www.gnu.org/licenses/>.
 
+import socket
 import unittest
 
 import mock
@@ -85,3 +86,57 @@ class TestWrapperChain(unittest.TestCase):
         chain._wrappers[0].assert_called_once_with("sock1")
         chain._wrappers[1].assert_called_once_with("sock2")
         chain._wrappers[2].assert_called_once_with("sock3")
+
+
+class TestAddrInfo(unittest.TestCase):
+    def test_accept_unix(self):
+        result = utils.addr_info('unixaddr')
+
+        self.assertEqual(result, socket.AF_UNIX)
+
+    def test_reject_nonseq(self):
+        self.assertRaises(ValueError, utils.addr_info, mock.Mock())
+
+    def test_reject_short(self):
+        self.assertRaises(ValueError, utils.addr_info, ('127.0.0.1',))
+
+    def test_reject_badport(self):
+        self.assertRaises(ValueError, utils.addr_info, ('127.0.0.1', -1))
+        self.assertRaises(ValueError, utils.addr_info, ('127.0.0.1', 65536))
+
+    def test_accept_empty(self):
+        result = utils.addr_info(('', 8080))
+
+        self.assertEqual(result, socket.AF_INET)
+
+    def test_reject_empty_too_many_fields(self):
+        self.assertRaises(ValueError, utils.addr_info, ('', 8080, 0))
+
+    def test_accept_ipv6(self):
+        result = utils.addr_info(('::1', 8080))
+
+        self.assertEqual(result, socket.AF_INET6)
+
+    def test_accept_ipv6_flowinfo(self):
+        result = utils.addr_info(('::1', 8080, 0))
+
+        self.assertEqual(result, socket.AF_INET6)
+
+    def test_accept_ipv6_scopeid(self):
+        result = utils.addr_info(('::1', 8080, 0, 0))
+
+        self.assertEqual(result, socket.AF_INET6)
+
+    def test_reject_ipv6_too_many_fields(self):
+        self.assertRaises(ValueError, utils.addr_info, ('::1', 8080, 0, 0, 0))
+
+    def test_accept_ipv4(self):
+        result = utils.addr_info(('127.0.0.1', 8080))
+
+        self.assertEqual(result, socket.AF_INET)
+
+    def test_reject_ipv4_too_many_fields(self):
+        self.assertRaises(ValueError, utils.addr_info, ('127.0.0.1', 8080, 0))
+
+    def test_reject_unknown(self):
+        self.assertRaises(ValueError, utils.addr_info, ('unknown', 8080))

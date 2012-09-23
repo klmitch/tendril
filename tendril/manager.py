@@ -20,6 +20,8 @@ import weakref
 import gevent
 import pkg_resources
 
+from tendril import utils
+
 
 __all__ = ["get_manager", "find_tendril"]
 
@@ -62,8 +64,14 @@ class TendrilManager(object):
                          TendrilManager.  This will be the IP address
                          and port number, as a tuple, on which to
                          accept connections and from which to initiate
-                         connections.  If not given, defaults to ('',
-                         0).
+                         connections.  If not given, defaults to
+                         ``('', 0)``.
+
+        Note: TendrilManager instances can only support one of IPv4 or
+        IPv6, and outgoing connection addresses must match how the
+        TendrilManager was initialized.  To get a TendrilManager
+        supporting outgoing IPv6 connections, use the endpoint
+        ``('::', 0)``.
         """
 
         # First, normalize the proto and endpoint
@@ -111,11 +119,18 @@ class TendrilManager(object):
                          TendrilManager.  This will be the IP address
                          and port number, as a tuple, on which to
                          accept connections and from which to initiate
-                         connections.  If not given, defaults to ('',
-                         0).
+                         connections.  If not given, defaults to
+                         ``('', 0)``.
+
+        Note: TendrilManager instances can only support one of IPv4 or
+        IPv6, and outgoing connection addresses must match how the
+        TendrilManager was initialized.  To get a TendrilManager
+        supporting outgoing IPv6 connections, use the endpoint
+        ``('::', 0)``.
         """
 
         self.endpoint = endpoint or ('', 0)
+        self.addr_family = utils.addr_info(self.endpoint)
         self.tendrils = {}
         self.running = False
 
@@ -284,6 +299,13 @@ class TendrilManager(object):
 
         if not self.running:
             raise ValueError("TendrilManager not running")
+
+        # Check the target address
+        fam = utils.addr_info(target)
+
+        # Verify that we're in the right family
+        if self.addr_family != fam:
+            raise ValueError("address family mismatch")
 
     @abc.abstractmethod
     def listener(self, acceptor, wrapper):
