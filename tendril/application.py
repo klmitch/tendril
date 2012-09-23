@@ -65,6 +65,15 @@ class Application(object):
     def recv_frame(self, frame):
         """
         Called to pass received frames to the application.
+
+        Note: if this method raises any exceptions, the connection
+        will be closed and the ``closed()`` method will be called with
+        the exception that was raised.  Also note that this method is
+        called in the receiving thread, meaning each frame will be
+        processed in turn; if it is desired to process frames in
+        parallel, the application should trigger a thread for each
+        message, or push frames into a work queue, or otherwise
+        arrange for the frame processing to occur in parallel.
         """
 
         pass
