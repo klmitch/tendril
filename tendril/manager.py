@@ -282,3 +282,6 @@ class TendrilManager(object):
         """Retrieve the name of the underlying network protocol."""
 
         pass
+
+
+get_manager = TendrilManager.get_manager
