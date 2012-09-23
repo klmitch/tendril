@@ -281,9 +281,9 @@ class Tendril(object):
             self._state = None
 
         # Check that the state is valid
-        if not isinstance(value, application.ApplicationState):
+        if not isinstance(value, application.Application):
             raise ValueError("application state must be an instance of "
-                             "tendril.ApplicationState")
+                             "tendril.Application")
 
         self._state = value
 
