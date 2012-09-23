@@ -39,7 +39,7 @@ class TendrilManager(object):
     __metaclass__ = abc.ABCMeta
 
     _managers = weakref.WeakValueDictionary()
-    _running_managers = weakref.WeakValueDictionary()
+    _running_managers = {}
 
     @classmethod
     def get_manager(cls, proto, endpoint=None):
