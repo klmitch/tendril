@@ -109,9 +109,12 @@ class TendrilManager(object):
 
     def __getitem__(self, addr):
         """
-        Finds the tendril corresponding to the given remote address.
-        Returns the Tendril object, or raises KeyError if the tendril
-        is not tracked by this TendrilManager.
+        Finds the tendril corresponding to the address tuple.  Returns
+        the Tendril object, or raises KeyError if the tendril is not
+        tracked by this TendrilManager.
+
+        The address tuple is the tuple of the local address and the
+        remote address for the tendril.
         """
 
         return self.tendrils[addr]
@@ -121,7 +124,7 @@ class TendrilManager(object):
         Adds the tendril to the set of tracked tendrils.
         """
 
-        self.tendrils[tendril.addr] = tendril
+        self.tendrils[tendril._tendril_key] = tendril
 
     def _untrack_tendril(self, tendril):
         """
@@ -129,7 +132,7 @@ class TendrilManager(object):
         """
 
         try:
-            del self.tendrils[tendril.addr]
+            del self.tendrils[tendril._tendril_key]
         except KeyError:
             pass
 

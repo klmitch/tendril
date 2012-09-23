@@ -129,6 +129,14 @@ class Tendril(object):
             self._state.closed(error)
 
     @property
+    def _tendril_key(self):
+        """
+        Retrieve a key which can be used to look up this tendril.
+        """
+
+        return self.local_addr, self.remote_addr
+
+    @property
     def send_framer(self):
         """
         Retrieve the framer in use for the sending side of the
