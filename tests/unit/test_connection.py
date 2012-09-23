@@ -325,3 +325,95 @@ class TestTendril(unittest.TestCase):
         del tend.application
 
         self.assertEqual(tend._application, None)
+
+    def test_send_streamify(self):
+        tend = TendrilForTest('manager', 'local', 'remote')
+        tend._send_framer = mock.Mock(
+            **{'streamify.return_value': "streamified"})
+        tend._send_framer_state = mock.Mock()
+
+        result = tend._send_streamify('frame')
+
+        tend._send_framer_state.reset.assert_called_once_with(
+            tend._send_framer)
+        tend._send_framer.streamify.assert_called_once_with(
+            tend._send_framer_state, 'frame')
+        self.assertEqual(result, 'streamified')
+
+    def test_recv_frameify(self):
+        generator = mock.Mock(**{'next.side_effect': ['frame1', 'frame2',
+                                                      'frame3', 'frame4',
+                                                      StopIteration]})
+        tend = TendrilForTest('manager', 'local', 'remote')
+        tend._recv_framer_state = mock.Mock()
+        tend._recv_framer = mock.Mock(**{'frameify.return_value': generator})
+        tend._application = mock.Mock()
+
+        tend._recv_frameify("this is a test")
+
+        tend._recv_framer_state.reset.assert_called_once_with(
+            tend._recv_framer)
+        tend._recv_framer.frameify.assert_called_once_with(
+            tend._recv_framer_state, 'this is a test')
+        self.assertEqual(generator.next.call_count, 5)
+        tend._application.recv_frame.assert_has_calls([
+                mock.call('frame1'),
+                mock.call('frame2'),
+                mock.call('frame3'),
+                mock.call('frame4'),
+                ])
+
+    def test_recv_frameify_switch(self):
+        class Switcher(object):
+            def __init__(inst, tend, framers):
+                inst.tendril = tend
+                inst.framers = framers
+                inst.frames = []
+
+            def recv_frame(inst, frame):
+                inst.frames.append(frame)
+                if frame in inst.framers:
+                    inst.tendril._recv_framer = inst.framers[frame]
+
+        generators = [
+            mock.Mock(**{'next.side_effect': ['frame1', 'frame2',
+                                              'switch1', 'badframe',
+                                              StopIteration],
+                         'throw.side_effect': StopIteration}),
+            mock.Mock(**{'next.side_effect': ['frame3', 'frame4',
+                                              'switch2', 'badframe',
+                                              StopIteration],
+                         'throw.side_effect': StopIteration}),
+            mock.Mock(**{'next.side_effect': ['frame5', 'frame6',
+                                              'frame7', 'frame8',
+                                              StopIteration],
+                         'throw.side_effect': StopIteration}),
+            ]
+
+        framers = dict(('switch%d' % i,
+                        mock.Mock(**{'frameify.return_value': gen}))
+                        for i, gen in enumerate(generators))
+
+        tend = TendrilForTest('manager', 'local', 'remote')
+        tend._recv_framer_state = mock.Mock()
+        tend._recv_framer = framers['switch0']
+        tend._application = Switcher(tend, framers)
+
+        tend._recv_frameify("this is a test")
+
+        tend._recv_framer_state.reset.assert_has_calls([
+                mock.call(framers['switch0']),
+                mock.call(framers['switch1']),
+                mock.call(framers['switch2']),
+                ])
+        framers['switch0'].frameify.assert_called_once_with(
+            tend._recv_framer_state, 'this is a test')
+        framers['switch1'].frameify.assert_called_once_with(
+            tend._recv_framer_state, '')
+        framers['switch2'].frameify.assert_called_once_with(
+            tend._recv_framer_state, '')
+        self.assertEqual(tend._application.frames, [
+                'frame1', 'frame2', 'switch1',
+                'frame3', 'frame4', 'switch2',
+                'frame5', 'frame6', 'frame7', 'frame8',
+                ])

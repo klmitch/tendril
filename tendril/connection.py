@@ -99,6 +99,59 @@ class Tendril(object):
         self._send_framer_state = framers.FrameState()
         self._recv_framer_state = framers.FrameState()
 
+    def _send_streamify(self, frame):
+        """
+        Helper method to streamify a frame.
+        """
+
+        # Get the state and framer
+        state = self._send_framer_state
+        framer = self._send_framer
+
+        # Reset the state as needed
+        state.reset(framer)
+
+        # Now pass the frame through streamify() and return the result
+        return framer.streamify(state, frame)
+
+    def _recv_frameify(self, data):
+        """
+        Helper method to frameify a stream.
+        """
+
+        # Get the state and framer
+        state = self._recv_framer_state
+        framer = None
+
+        # Grab off as many frames as we can
+        frameify = None
+        while True:
+            # Check if we need to change framers
+            if framer != self._recv_framer:
+                # Notify the currently-running framer
+                if frameify:
+                    try:
+                        frameify.throw(framers.FrameSwitch)
+                    except StopIteration:
+                        pass
+
+                # Set up the new framer
+                framer = self._recv_framer
+                state.reset(framer)
+                frameify = framer.frameify(state, data)
+                data = ''  # Now part of the state's buffer
+
+            # Get the next frame
+            try:
+                frame = frameify.next()
+            except StopIteration:
+                # OK, we've extracted as many frames as we can
+                break
+
+            # OK, send the frame to the application
+            if self._application:
+                self._application.recv_frame(frame)
+
     def wrap(self, wrapper):
         """
         Allows the underlying socket to be wrapped, as by an SSL
