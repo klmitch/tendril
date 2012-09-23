@@ -21,6 +21,9 @@ from tendril import application
 from tendril import framers
 
 
+__all__ = ["TendrilFramers", "TendrilFramerStates"]
+
+
 TendrilFramers = collections.namedtuple('TendrilFramers', ['send', 'recv'])
 TendrilFramerStates = collections.namedtuple('TendrilFramerStates',
                                              ['send', 'recv'])

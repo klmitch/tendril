@@ -21,6 +21,9 @@ import gevent
 import pkg_resources
 
 
+__all__ = ["get_manager", "find_tendril"]
+
+
 class TendrilManager(object):
     """
     Manages all connections through a particular endpoint.  Handles

@@ -18,6 +18,12 @@ import abc
 import struct
 
 
+__all__ = ["FrameSwitch",
+           "Framer",
+           "IdentityFramer", "ChunkFramer", "LineFramer", "StructFramer",
+           "StuffingFramer", "COBSFramer"]
+
+
 class FrameSwitch(BaseException):
     """
     Sentinel exception used to inform the framer that it should hand

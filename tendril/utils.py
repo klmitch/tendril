@@ -17,6 +17,9 @@
 import collections
 
 
+__all__ = ["TendrilPartial", "WrapperChain"]
+
+
 class TendrilPartial(object):
     """
     Similar to ``functools.partial()``; however, the positional

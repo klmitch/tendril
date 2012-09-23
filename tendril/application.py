@@ -17,6 +17,9 @@
 import abc
 
 
+__all__ = ["Application"]
+
+
 class Application(object):
     """
     Base class for tracking application state.  Application classes
