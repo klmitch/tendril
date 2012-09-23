@@ -97,18 +97,16 @@ class Tendril(object):
         self._send_framer_state = framers.FramerState()
         self._recv_framer_state = framers.FramerState()
 
-    def wrap(self, wrapper, *args, **kwargs):
+    def wrap(self, wrapper):
         """
         Allows the underlying socket to be wrapped, as by an SSL
         connection.  Not implemented by all Tendril subclasses.
 
         :param wrapper: A callable taking, as its first argument, a
-                        socket.socket object.  All other positional
-                        and keyword arguments will be passed to this
-                        wrapping callable.  The callable must return a
-                        valid proxy for the socket.socket object,
-                        which will subsequently be used to communicate
-                        on the connection.
+                        socket.socket object.  The callable must
+                        return a valid proxy for the socket.socket
+                        object, which will subsequently be used to
+                        communicate on the connection.
         """
 
         raise NotImplementedError("Cannot wrap this connection")
