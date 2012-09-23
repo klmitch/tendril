@@ -64,7 +64,7 @@ class TendrilManager(object):
         """
 
         # First, normalize the proto and endpoint
-        proto = proto.tolower()
+        proto = proto.lower()
         endpoint = endpoint or ('', 0)
 
         # See if the manager already exists
@@ -95,7 +95,7 @@ class TendrilManager(object):
         """
 
         # First, normalize the proto
-        proto = proto.tolower()
+        proto = proto.lower()
 
         # Now, find and return the tendril
         return cls._tendrils[proto][addr]
