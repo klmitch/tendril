@@ -25,7 +25,7 @@ setup(
         "pkg_resources",
         ],
     tests_require=[
-        "mock",
+        "mock>=1.0b1",
         ],
     entry_points={
         'tendril.manager': [
