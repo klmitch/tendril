@@ -29,7 +29,7 @@ class TendrilForTest(connection.Tendril):
     def send_frame(self, frame):
         pass
 
-    def _close(self):
+    def close(self):
         pass
 
 
@@ -71,14 +71,6 @@ class TestTendril(unittest.TestCase):
         tend = TendrilForTest('manager', 'local', 'remote')
 
         self.assertRaises(NotImplementedError, tend.wrap, 'wrapper')
-
-    @mock.patch.object(TendrilForTest, '_close')
-    def test_close(self, mock_close):
-        tend = TendrilForTest('manager', 'local', 'remote')
-
-        tend.close()
-
-        mock_close.assert_called_once_with()
 
     def test_closed_noapp(self):
         tend = TendrilForTest('manager', 'local', 'remote')

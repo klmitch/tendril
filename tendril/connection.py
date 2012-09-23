@@ -166,12 +166,6 @@ class Tendril(object):
 
         raise NotImplementedError("Cannot wrap this connection")
 
-    def close(self):
-        """Close the connection."""
-
-        # Close the connection, but do not call the closed() method.
-        self._close()
-
     def closed(self, error=None):
         """
         Notify the application that the connection has been closed.
@@ -364,7 +358,7 @@ class Tendril(object):
         pass
 
     @abc.abstractmethod
-    def _close(self):
+    def close(self):
         """
         Close the connection.  Must not call the ``closed()`` method;
         that will be taken care of at a higher layer.
