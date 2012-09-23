@@ -19,7 +19,6 @@ import unittest
 import mock
 import pkg_resources
 
-from tendril import application
 from tendril import manager
 
 
