@@ -10,8 +10,11 @@ subclassing the ``Application`` class and providing an implementation
 for the recv_frame() method; then get a ``TendrilManager`` class
 instance and start it, and Tendril manages the rest.
 
+Tendril Concepts
+================
+
 Frames
-======
+------
 
 Tendril is based on the concept of passing around frames or packets of
 data.  The fact is, most network protocols are based on sending and
@@ -72,7 +75,7 @@ given frame into a class object that the rest of the application then
 processes as necessary.
 
 Connection Tracking
-===================
+-------------------
 
 Tendril is also based on the concept of tracking connection state.
 For connection-oriented protocols such as TCP, obviously, this is not
@@ -95,7 +98,7 @@ implementation of an application which utilizes both types of
 protocols.
 
 Extensibility
-=============
+-------------
 
 Careful readers may have noticed the use of the terms, "such as TCP"
 and "such as UDP."  Although Tendril only has built-in support for TCP
@@ -115,3 +118,97 @@ objects, it is not necessary to register these framers using
 ``pkg_resources`` entry points.)  Objects of these classes may then
 simply be assigned to the appropriate ``framers`` attribute on the
 ``Tendril`` instance representing the connection.
+
+Advanced Interfaces
+-------------------
+
+Tendril also provides an advanced interface that allows a given raw
+socket to be "wrapped."  Using this feature, an ordinary TCP socket
+could be converted into an SSL socket.  Other uses for this interface
+are possible, such as setting socket options for the socket.  Tendril
+also provides an interface to allow multiple of these wrapper
+functions to be called in a given order.
+
+Standard Usage
+==============
+
+The first step in using Tendril is to define an application by
+subclassing the ``Application`` class.  (Subclassing is not strictly
+necessary--Tendril uses Python's standard ``abc`` package for defining
+abstract base classes--but using subclassing will pull in a few
+helpful and/or required methods.)  The subclass need merely implement
+the recv_frame() method, which will be called when a frame is
+received.  The ``Application`` subclass constructor itself can be the
+*acceptor* to be used by Tendril (more on acceptors in a moment).
+
+Once the ``Application`` subclass has been created, the developer then
+needs to get a ``TendrilManager`` instance, using the
+``get_manager()`` factory function.  The exact call to
+``get_manager()`` depends on the needs; for making outgoing
+connections, simply calling ``get_manager("tcp")`` is sufficient.  If
+listening on a port or making an outgoing connection from a specific
+address and/or port is desired, the second argument to
+``get_manager()`` may be a tuple of the desired local IP address and
+the port number (i.e., ``("127.0.0.1", 80)``).
+
+All managers must be started, and ``get_manager()`` does not start the
+manager by itself.  Check the manager's ``running`` attribute to see
+if the manager is already running, and if it is not, call its
+``start()`` method.  To accept connections, pass ``start()`` the
+*acceptor* (usually the ``Application`` subclass).  The ``start()``
+method also accepts a *wrapper*, which will be called with the
+listening socket when it is created.
+
+If, instead of accepting connections (as a server would do), the
+desire is to make outgoing connections, simply call ``start()`` with
+no arguments, then call the ``connect()`` method of the manager.  This
+method takes the *target* of the connection (i.e., the IP address and
+port number, as a tuple) and the *acceptor*.  (It also has an optional
+*wrapper*, which will be called with the outgoing socket just prior to
+initiating the connection.)
+
+Acceptors
+---------
+
+An *acceptor* is simply a callable taking a single argument--the
+``Tendril`` instance representing the connection--and returning an
+instance of a subclass of ``Application``, which will be assigned to
+the ``state`` attribute of the ``Tendril`` instance.  The acceptor
+initializes the application; it also has the opportunity to manipulate
+that ``Tendril``, such as setting framers, calling the ``Tendril``
+instance's ``wrap()`` method, or simply closing the connection.
+
+Although the ``TendrilManager`` does not provide the opportunity to
+pass arguments to the acceptor, it is certainly possible to do so.
+The standard Python ``functools.partial()`` is one obvious interface,
+but Tendril additionally provides its own ``TendrilPartial`` utility;
+the advantage of ``TendrilPartial`` is that the positional argument
+passed to the acceptor--the ``Tendril`` instance--will be the first
+positional argument, rather than the last one, as would be the case
+with ``functools.partial()``.
+
+Wrappers
+--------
+
+A *wrapper* is simply a callable again taking a single argument--in
+this case, the socket object--and returning a wrapped version of that
+argument; that wrapped version of the socket will then be used in
+subsequent network calls.  A wrapper which manipulates socket options
+can simply return the socket object which was passed in, while one
+which performs SSL encapsulation can return the SSL wrapper.  Again,
+although there is no opportunity to pass arguments to the wrapper in a
+manager ``start()`` or ``connect()`` call (or a ``Tendril`` object's
+``wrap()`` call), ``functools.partial()`` or Tendril's
+``TendrilPartial`` utility can be used.  In particular, in conjunction
+with ``TendrilPartial``, the ``ssl.wrap_socket()`` call can be used as
+a socket wrapper directly, enabling an SSL connection to be set up
+easily.
+
+Of course, it may be necessary to perform multiple "wrapping"
+activities on a connection, such as setting socket options followed by
+wrapping the socket in an SSL connection.  For this case, Tendril
+provides the ``WrapperChain``; it can be initialized in the same way
+that ``TendrilPartial`` is, but additional wrappers can be added by
+calling the ``chain()`` method; when called, the ``WrapperChain``
+object will call each wrapper in the order defined, returning the
+final wrapped socket in the end.
