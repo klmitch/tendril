@@ -202,7 +202,7 @@ class TendrilManager(object):
 
         # Start the listening thread
         self._listen_thread = gevent.spawn(self.listener, acceptor,
-                                           wrapper, args, kwargs)
+                                           wrapper)
 
         # Make sure to reset running if it exits
         self._listen_thread.link(self.stop)
