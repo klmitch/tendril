@@ -535,7 +535,6 @@ class COBSFramer(Framer):
                                               for l in range(225, 256))
                                          ]
 
-
         return cls._tabs['dec_cobs_zpe'], cls._tabs['enc_cobs_zpe']
 
     @staticmethod
