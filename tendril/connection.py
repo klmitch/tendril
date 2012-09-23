@@ -93,8 +93,8 @@ class Tendril(object):
         self._recv_framer = f
 
         # Set up state for the framer
-        self._send_framer_state = framers.FramerState()
-        self._recv_framer_state = framers.FramerState()
+        self._send_framer_state = framers.FrameState()
+        self._recv_framer_state = framers.FrameState()
 
     def wrap(self, wrapper):
         """
