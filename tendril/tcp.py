@@ -39,24 +39,22 @@ class TCPTendril(connection.Tendril):
 
         self._sock = sock
 
+        # Send buffer and support
         self._sendbuf_event = event.Event()
         self._sendbuf = ''
 
+        # Thread objects for the send and receive threads
         self._recv_thread = None
         self._send_thread = None
 
+        # Locks for the send and receive threads
         self._recv_lock = None
         self._send_lock = None
-
-        self._restart = event.Event()
 
     def _start(self):
         # Initialize the locks
         self._recv_lock = coros.Semaphore(0)
         self._send_lock = coros.Semaphore(0)
-
-        # Make sure the threads can restart
-        self._restart.set()
 
         # Boot the threads
         self._recv_thread = gevent.spawn(self._recv)
@@ -71,10 +69,9 @@ class TCPTendril(connection.Tendril):
         # Outer loop: receive some data
         while True:
             # Wait until we can go
-            if self._restart.is_set():
-                self._recv_lock.release()
-                self._restart.wait()
-                self._recv_lock.acquire()
+            self._recv_lock.release()
+            gevent.sleep()  # Yield to another thread
+            self._recv_lock.acquire()
 
             recv_buf = self._sock.recv(self.recv_bufsize)
 
@@ -171,9 +168,6 @@ class TCPTendril(connection.Tendril):
 
         if self._recv_thread and self._send_thread:
             # Have to suspend the send/recv threads
-            self._restart.clear()
-
-            # Now wait until they're at a stopping point
             self._recv_lock.acquire()
             self._send_lock.acquire()
 
@@ -185,9 +179,6 @@ class TCPTendril(connection.Tendril):
             # Release our locks
             self._send_lock.release()
             self._recv_lock.release()
-
-            # And signal the all-clear
-            self._restart.set()
 
     @property
     def sock(self):
