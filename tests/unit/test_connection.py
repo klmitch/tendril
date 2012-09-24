@@ -30,7 +30,7 @@ class TendrilForTest(connection.Tendril):
         pass
 
     def close(self):
-        pass
+        super(TendrilForTest, self).close()
 
 
 class ApplicationForTest(application.Application):
@@ -409,3 +409,10 @@ class TestTendril(unittest.TestCase):
                 'frame3', 'frame4', 'switch2',
                 'frame5', 'frame6', 'frame7', 'frame8',
                 ])
+
+    def test_close(self):
+        tend = TendrilForTest(mock.Mock(), 'local', 'remote')
+
+        tend.close()
+
+        tend.manager._untrack_tendril.assert_called_once_with(tend)

@@ -364,7 +364,8 @@ class Tendril(object):
         that will be taken care of at a higher layer.
         """
 
-        pass
+        # Make sure we're untracked
+        self.manager._untrack_tendril(self)
 
     @abc.abstractproperty
     def proto(self):
