@@ -28,11 +28,34 @@ from tendril import manager
 
 
 class TCPTendril(connection.Tendril):
+    """
+    Manages state associated with a single TCP connection.  In
+    addition to the attributes available on the Tendril class, this
+    class includes the attribute ``recv_bufsize``, which allows tuning
+    of the amount of data requested from the system for each call to
+    the socket ``recv()`` method.  This class also provides the
+    property ``sock``, allowing access to the underlying ``socket``
+    object (or its wrapper).
+    """
+
     default_framer = framers.LineFramer
     proto = 'tcp'
     recv_bufsize = 4096
 
     def __init__(self, manager, sock, remote_addr=None):
+        """
+        Initialize a TCPTendril.
+
+        :param manager: The TCPTendrilManager responsible for the
+                        Tendril.
+        :param sock: The socket for the underlying connection.
+        :param remote_addr: The address of the remote end of the
+                            connection represented by the TCPTendril.
+                            If not provided, will be derived by
+                            calling the ``getpeername()`` method on
+                            the socket.
+        """
+
         super(TCPTendril, self).__init__(manager,
                                          sock.getsockname(),
                                          remote_addr or sock.getpeername())
@@ -52,6 +75,10 @@ class TCPTendril(connection.Tendril):
         self._send_lock = None
 
     def _start(self):
+        """
+        Starts the underlying send and receive threads.
+        """
+
         # Initialize the locks
         self._recv_lock = coros.Semaphore(0)
         self._send_lock = coros.Semaphore(0)
@@ -66,6 +93,12 @@ class TCPTendril(connection.Tendril):
         self._send_thread.link(self._thread_error)
 
     def _recv(self):
+        """
+        Implementation of the receive thread.  Waits for data to
+        arrive on the socket, then passes the data through the defined
+        receive framer and sends it on to the application.
+        """
+
         # Outer loop: receive some data
         while True:
             # Wait until we can go
@@ -105,6 +138,12 @@ class TCPTendril(connection.Tendril):
             self._recv_frameify(recv_buf)
 
     def _send(self):
+        """
+        Implementation of the send thread.  Waits for data to be added
+        to the send buffer, then passes as much of the buffered data
+        to the socket ``send()`` method as possible.
+        """
+
         # Outer loop: wait for data to send
         while True:
             # Release the send lock and wait for data, then reacquire
@@ -125,6 +164,11 @@ class TCPTendril(connection.Tendril):
             self._sendbuf_event.clear()
 
     def _thread_error(self, thread):
+        """
+        Handles the case that the send or receive thread exit or throw
+        an exception.
+        """
+
         # Avoid double-killing the thread
         if thread == self._send_thread:
             self._send_thread = None
@@ -182,13 +226,26 @@ class TCPTendril(connection.Tendril):
 
     @property
     def sock(self):
+        """
+        Retrieve the underlying socket object.  Read-only.
+        """
+
         return self._sock
 
     def send_frame(self, frame):
+        """
+        Sends a frame to the other end of the connection.
+        """
+
         self._sendbuf += self._send_frameify(frame)
         self._sendbuf_event.set()
 
     def close(self):
+        """
+        Close the connection.  Kills the send and receive threads, as
+        well as closing the underlying socket.
+        """
+
         if self._recv_thread:
             self._recv_thread.kill()
             self._recv_thread = None
@@ -206,10 +263,38 @@ class TCPTendril(connection.Tendril):
 
 
 class TCPTendrilManager(manager.TendrilManager):
+    """
+    Manages new connections through a particular endpoint.  Handles
+    accepting new connections and creating new outgoing connections.
+    This class includes the attribute ``backlog``, which allows tuning
+    of the size of the backlog passed to the socket ``listen()``
+    method.
+    """
+
     proto = 'tcp'
     backlog = 1024
 
     def connect(self, target, acceptor, wrapper=None):
+        """
+        Initiate a connection from the tendril manager's endpoint.
+        Once the connection is completed, a TCPTendril object will be
+        created and passed to the given acceptor.  The acceptor should
+        examine the Tendril object to see if any errors occurred.
+
+        :param target: The target of the connection attempt.
+        :param acceptor: A callable which will initialize the state of
+                         the new TCPTendril object.
+        :param wrapper: A callable taking, as its first argument, a
+                        socket.socket object.  The callable must
+                        return a valid proxy for the socket.socket
+                        object, which will subsequently be used to
+                        communicate on the connection.
+
+        For passing extra arguments to the acceptor or the wrapper,
+        see the ``TendrilPartial`` class; for chaining together
+        multiple wrappers, see the ``WrapperChain`` class.
+        """
+
         # Call some common sanity-checks
         super(TCPTendrilManager, self).connect(target, accept, wrapper)
 
@@ -252,6 +337,27 @@ class TCPTendrilManager(manager.TendrilManager):
         return tend
 
     def listener(self, acceptor, wrapper):
+        """
+        Listens for new connections to the manager's endpoint.  Once a
+        new connection is received, a TCPTendril object is generated
+        for it and it is passed to the acceptor, which must initialize
+        the state of the connection.  If no acceptor is given, no new
+        connections can be initialized.
+
+        :param acceptor: If given, specifies a callable that will be
+                         called with each newly received TCPTendril;
+                         that callable is responsible for initial
+                         acceptance of the connection and for setting
+                         up the initial state of the connection.  If
+                         not given, no new connections will be
+                         accepted by the TCPTendrilManager.
+        :param wrapper: A callable taking, as its first argument, a
+                        socket.socket object.  The callable must
+                        return a valid proxy for the socket.socket
+                        object, which will subsequently be used to
+                        communicate on the connection.
+        """
+
         # If we have no acceptor, there's nothing for us to do here
         if not acceptor:
             # Just sleep in a loop
