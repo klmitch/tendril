@@ -30,6 +30,7 @@ setup(
         ],
     entry_points={
         'tendril.manager': [
+            'tcp = tendril.tcp:TCPTendrilManager',
             ],
         },
     )
