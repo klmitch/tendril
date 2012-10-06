@@ -2,6 +2,13 @@
 
 from setuptools import setup
 
+
+def readreq(filename):
+    with open(filename) as f:
+        reqs = [r.partition('#')[0].strip() for r in f]
+        return [r for r in reqs if r]
+
+
 def readfile(filename):
     with open(filename) as f:
         return f.read()
@@ -20,14 +27,8 @@ setup(
         'Programming Language :: Python',
         ],
     packages=['tendril'],
-    requires=[
-        "gevent",
-        "netaddr",
-        "pkg_resources",
-        ],
-    tests_require=[
-        "mock>=1.0b1",
-        ],
+    requires=readreq('install-requires'),
+    tests_require=readreq('test-requires'),
     entry_points={
         'tendril.manager': [
             'tcp = tendril.tcp:TCPTendrilManager',
