@@ -408,14 +408,32 @@ class TCPTendrilManager(manager.TendrilManager):
                 try:
                     tend.application = acceptor(tend)
                 except Exception:
+                    # What comes next may overwrite the exception, so
+                    # save it for reraise later...
+                    exc_class, exc_value, exc_tb = sys.exc_info()
+
                     # Make sure the connection is closed
-                    cli.close()
-                    raise
+                    try:
+                        cli.close()
+                    except Exception:
+                        pass
+
+                    raise exc_class, exc_value, exc_tb
             except Exception:
                 # Do something if we're in an error loop
                 err_thresh += 1
                 if err_thresh >= 10:
-                    raise
+                    # What comes next may overwrite the exception, so
+                    # save it for reraise later...
+                    exc_class, exc_value, exc_tb = sys.exc_info()
+
+                    # Make sure the socket is closed
+                    try:
+                        sock.close()
+                    except Exception:
+                        pass
+
+                    raise exc_class, exc_value, exc_tb
                 continue
 
             # Decrement the error threshold
