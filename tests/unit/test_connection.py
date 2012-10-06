@@ -349,11 +349,11 @@ class TestTendril(unittest.TestCase):
             tend._recv_framer_state, 'this is a test')
         self.assertEqual(generator.next.call_count, 5)
         tend._application.recv_frame.assert_has_calls([
-                mock.call('frame1'),
-                mock.call('frame2'),
-                mock.call('frame3'),
-                mock.call('frame4'),
-                ])
+            mock.call('frame1'),
+            mock.call('frame2'),
+            mock.call('frame3'),
+            mock.call('frame4'),
+        ])
 
     def test_recv_frameify_switch(self):
         class Switcher(object):
@@ -380,11 +380,11 @@ class TestTendril(unittest.TestCase):
                                               'frame7', 'frame8',
                                               StopIteration],
                          'throw.side_effect': StopIteration}),
-            ]
+        ]
 
         framers = dict(('switch%d' % i,
                         mock.Mock(**{'frameify.return_value': gen}))
-                        for i, gen in enumerate(generators))
+                       for i, gen in enumerate(generators))
 
         tend = TendrilForTest('manager', 'local', 'remote')
         tend._recv_framer_state = mock.Mock()
@@ -394,10 +394,10 @@ class TestTendril(unittest.TestCase):
         tend._recv_frameify("this is a test")
 
         tend._recv_framer_state.reset.assert_has_calls([
-                mock.call(framers['switch0']),
-                mock.call(framers['switch1']),
-                mock.call(framers['switch2']),
-                ])
+            mock.call(framers['switch0']),
+            mock.call(framers['switch1']),
+            mock.call(framers['switch2']),
+        ])
         framers['switch0'].frameify.assert_called_once_with(
             tend._recv_framer_state, 'this is a test')
         framers['switch1'].frameify.assert_called_once_with(
@@ -405,10 +405,10 @@ class TestTendril(unittest.TestCase):
         framers['switch2'].frameify.assert_called_once_with(
             tend._recv_framer_state, '')
         self.assertEqual(tend._application.frames, [
-                'frame1', 'frame2', 'switch1',
-                'frame3', 'frame4', 'switch2',
-                'frame5', 'frame6', 'frame7', 'frame8',
-                ])
+            'frame1', 'frame2', 'switch1',
+            'frame3', 'frame4', 'switch2',
+            'frame5', 'frame6', 'frame7', 'frame8',
+        ])
 
     def test_close(self):
         tend = TendrilForTest(mock.Mock(), 'local', 'remote')

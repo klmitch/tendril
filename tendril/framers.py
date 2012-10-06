@@ -633,7 +633,7 @@ class COBSFramer(Framer):
 
             # Do we care about look-ahead?
             if (len(enc_tab) > 1 and i + 1 < len(blocks) and
-                blocks[i + 1] == '' and len(blk) <= 30):
+                    blocks[i + 1] == '' and len(blk) <= 30):
                 # Use the second encoder table
                 tab = enc_tab[1]
 

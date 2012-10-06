@@ -33,9 +33,9 @@ class TestException(Exception):
 class TestTCPTendril(unittest.TestCase):
     def setUp(self):
         self.sock = mock.Mock(**{
-                'getsockname.return_value': ('127.0.0.1', 8080),
-                'getpeername.return_value': ('127.0.0.2', 8880),
-                })
+            'getsockname.return_value': ('127.0.0.1', 8080),
+            'getpeername.return_value': ('127.0.0.2', 8880),
+        })
 
     def test_init_withremote(self):
         tend = tcp.TCPTendril('manager', self.sock, ('127.0.0.2', 8880))
@@ -105,10 +105,10 @@ class TestTCPTendril(unittest.TestCase):
             tend._recv()
 
         self.assertEqual(tend._recv_lock.method_calls, [
-                mock.call.release(), mock.call.acquire(),
-                mock.call.release(), mock.call.acquire(),
-                mock.call.release(), mock.call.acquire(),
-                ])
+            mock.call.release(), mock.call.acquire(),
+            mock.call.release(), mock.call.acquire(),
+            mock.call.release(), mock.call.acquire(),
+        ])
         mock_sleep.assert_has_calls([mock.call(), mock.call(), mock.call()])
         self.sock.recv.assert_has_calls([mock.call(4096), mock.call(4096),
                                          mock.call(4096)])
@@ -138,10 +138,10 @@ class TestTCPTendril(unittest.TestCase):
             tend._recv()
 
         self.assertEqual(tend._recv_lock.method_calls, [
-                mock.call.release(), mock.call.acquire(),
-                mock.call.release(), mock.call.acquire(),
-                mock.call.release(), mock.call.acquire(),
-                ])
+            mock.call.release(), mock.call.acquire(),
+            mock.call.release(), mock.call.acquire(),
+            mock.call.release(), mock.call.acquire(),
+        ])
         mock_sleep.assert_has_calls([mock.call(), mock.call(), mock.call()])
         self.sock.recv.assert_has_calls([mock.call(1024), mock.call(1024),
                                          mock.call(1024)])
@@ -161,18 +161,18 @@ class TestTCPTendril(unittest.TestCase):
         tend._sendbuf = 'frame 1frame 2'
         tend._send_lock = mock.Mock()
         tend._sendbuf_event = mock.Mock(**{
-                'clear.side_effect': gevent.GreenletExit,
-                })
+            'clear.side_effect': gevent.GreenletExit,
+        })
 
         with self.assertRaises(gevent.GreenletExit):
             tend._send()
 
         self.assertEqual(tend._send_lock.method_calls, [
-                mock.call.release(), mock.call.acquire(),
-                ])
+            mock.call.release(), mock.call.acquire(),
+        ])
         self.assertEqual(tend._sendbuf_event.method_calls, [
-                mock.call.wait(), mock.call.clear(),
-                ])
+            mock.call.wait(), mock.call.clear(),
+        ])
         self.assertEqual(tend._sendbuf, '')
         self.sock.send.assert_has_calls([mock.call('frame 1frame 2'),
                                          mock.call('frame 2')])
@@ -203,9 +203,9 @@ class TestTCPTendril(unittest.TestCase):
     @mock.patch.object(tcp.TCPTendril, 'closed')
     def test_thread_error_greenletexit(self, mock_closed, mock_close):
         thread = mock.Mock(**{
-                'successful.return_value': False,
-                'exception': gevent.GreenletExit(),
-                })
+            'successful.return_value': False,
+            'exception': gevent.GreenletExit(),
+        })
         tend = tcp.TCPTendril('manager', self.sock)
         tend._send_thread = mock.Mock()
         tend._recv_thread = mock.Mock()
@@ -223,9 +223,9 @@ class TestTCPTendril(unittest.TestCase):
     @mock.patch.object(tcp.TCPTendril, 'closed')
     def test_thread_error_exception(self, mock_closed, mock_close):
         thread = mock.Mock(**{
-                'successful.return_value': False,
-                'exception': TestException(),
-                })
+            'successful.return_value': False,
+            'exception': TestException(),
+        })
         tend = tcp.TCPTendril('manager', self.sock)
         tend._send_thread = mock.Mock()
         tend._recv_thread = mock.Mock()

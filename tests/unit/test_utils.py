@@ -57,8 +57,8 @@ class TestWrapperChain(unittest.TestCase):
         chain = utils.WrapperChain('wrapper', 1, 2, 3, a=4, b=5, c=6)
 
         self.assertEqual(chain._wrappers, [
-                ('wrapper', (1, 2, 3), dict(a=4, b=5, c=6)),
-                ])
+            ('wrapper', (1, 2, 3), dict(a=4, b=5, c=6)),
+        ])
 
     @mock.patch.object(utils, 'TendrilPartial',
                        new=lambda func, *args, **kwargs: (func, args, kwargs))
@@ -72,8 +72,8 @@ class TestWrapperChain(unittest.TestCase):
 
         self.assertEqual(id(chain), id(result))
         self.assertEqual(chain._wrappers, [
-                ('wrapper', (1, 2, 3), dict(a=4, b=5, c=6)),
-                ])
+            ('wrapper', (1, 2, 3), dict(a=4, b=5, c=6)),
+        ])
 
     def test_call(self):
         chain = utils.WrapperChain(mock.Mock(return_value="sock2"))\

@@ -45,8 +45,8 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(tm._listen_thread, None)
         self.assertEqual(tm._manager_key, ('test', ('', 0)))
         self.assertEqual(dict(manager.TendrilManager._managers), {
-                ('test', ('', 0)): tm,
-                })
+            ('test', ('', 0)): tm,
+        })
         self.assertEqual(manager.TendrilManager._tendrils, {})
         self.assertEqual(manager.TendrilManager._running_managers, {})
 
@@ -59,8 +59,8 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(tm._listen_thread, None)
         self.assertEqual(tm._manager_key, ('test', ('127.0.0.1', 8080)))
         self.assertEqual(dict(manager.TendrilManager._managers), {
-                ('test', ('127.0.0.1', 8080)): tm,
-                })
+            ('test', ('127.0.0.1', 8080)): tm,
+        })
         self.assertEqual(manager.TendrilManager._tendrils, {})
         self.assertEqual(manager.TendrilManager._running_managers, {})
 
@@ -90,7 +90,7 @@ class TestTendrilManager(unittest.TestCase):
     def test_get_manager_failedload(self, mock_iter_entry_points):
         mock_iter_entry_points.return_value = [
             mock.Mock(**{"load.side_effect": TypeError}),
-            ]
+        ]
 
         self.assertRaises(TypeError, manager.get_manager, 'test')
         mock_iter_entry_points.assert_called_once_with('tendril.manager',
@@ -103,7 +103,7 @@ class TestTendrilManager(unittest.TestCase):
             mock.Mock(**{"load.side_effect": ImportError}),
             mock.Mock(**{"load.side_effect": pkg_resources.UnknownExtra}),
             mock.Mock(**{"load.return_value": loader}),
-            ]
+        ]
 
         manager.get_manager('test')
 
@@ -118,7 +118,7 @@ class TestTendrilManager(unittest.TestCase):
         loader = mock.Mock()
         mock_iter_entry_points.return_value = [
             mock.Mock(**{"load.return_value": loader}),
-            ]
+        ]
 
         manager.get_manager('test', ('127.0.0.1', 8080))
 
@@ -137,12 +137,12 @@ class TestTendrilManager(unittest.TestCase):
         tm._track_tendril(tendril)
 
         self.assertEqual(tm.tendrils, {
-                (('127.0.0.1', 8080), ('127.0.0.2', 8880)): tendril,
-                })
+            (('127.0.0.1', 8080), ('127.0.0.2', 8880)): tendril,
+        })
         self.assertTrue('test' in manager.TendrilManager._tendrils)
         self.assertEqual(dict(manager.TendrilManager._tendrils['test']), {
-                (('127.0.0.1', 8080), ('127.0.0.2', 8880)): tendril,
-                })
+            (('127.0.0.1', 8080), ('127.0.0.2', 8880)): tendril,
+        })
 
     def test_untrack_tendril(self):
         tm = ManagerForTest()
@@ -152,7 +152,7 @@ class TestTendrilManager(unittest.TestCase):
         tm.tendrils[tendril._tendril_key] = tendril
         manager.TendrilManager._tendrils['test'] = {
             tendril._tendril_key: tendril,
-            }
+        }
 
         tm._untrack_tendril(tendril)
 
@@ -188,7 +188,7 @@ class TestTendrilManager(unittest.TestCase):
                                           ('127.0.0.2', 8880)))
         manager.TendrilManager._tendrils['test'] = {
             tendril._tendril_key: tendril,
-            }
+        }
 
         result = manager.find_tendril('TEST', tendril._tendril_key)
 
@@ -230,8 +230,8 @@ class TestTendrilManager(unittest.TestCase):
 
         self.assertRaises(ValueError, tm.start)
         self.assertEqual(manager.TendrilManager._running_managers, {
-                tm._manager_key: tm,
-                })
+            tm._manager_key: tm,
+        })
         self.assertFalse(mock_spawn.called)
 
     @mock.patch('gevent.spawn')
@@ -242,8 +242,8 @@ class TestTendrilManager(unittest.TestCase):
 
         self.assertEqual(tm.running, True)
         self.assertEqual(manager.TendrilManager._running_managers, {
-                tm._manager_key: tm,
-                })
+            tm._manager_key: tm,
+        })
         self.assertNotEqual(tm._listen_thread, None)
         mock_spawn.assert_called_once_with(tm.listener, 'acceptor', 'wrapper')
         tm._listen_thread.link.assert_called_once_with(tm.stop)
@@ -306,7 +306,7 @@ class TestTendrilManager(unittest.TestCase):
             mock.Mock(proto='test',
                       _tendril_key=(('127.0.0.1', 8080),
                                     ('127.0.0.4', 8880))),
-            ]
+        ]
 
         tm = ManagerForTest()
         tm.running = True

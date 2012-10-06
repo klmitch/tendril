@@ -116,7 +116,7 @@ class TestFramer(unittest.TestCase):
 
     def test_framify_is_generator(self):
         self.assertTrue(inspect.isgeneratorfunction(
-                self.framer_class.frameify))
+            self.framer_class.frameify))
 
     def check_init_state(self, *args, **kwargs):
         # Instantiate the framer...
@@ -378,9 +378,9 @@ class TestStructFramer(TestFramer):
         s._reset(f)
 
         result = f.frameify(s, ''.join([
-                    self.make_frame('frame1'),
-                    self.make_frame('frame2'),
-                    ]))
+            self.make_frame('frame1'),
+            self.make_frame('frame2'),
+        ]))
 
         self.assertEqual(list(result), ['frame1', 'frame2'])
         self.assertEqual(s.recv_buf, '')
@@ -411,9 +411,9 @@ class TestStructFramer(TestFramer):
 
     def test_frameify_interrupt(self):
         self.check_interrupt(''.join([
-                    self.make_frame('frame1'),
-                    self.make_frame('frame2'),
-                    ]), 'frame1', self.make_frame('frame2'), '!B')
+            self.make_frame('frame1'),
+            self.make_frame('frame2'),
+        ]), 'frame1', self.make_frame('frame2'), '!B')
 
     def test_streamify_byte(self):
         f = self.framer_class('!B')
@@ -516,10 +516,10 @@ class TestStuffingFramer(TestFramer):
 
     def test_composition(self):
         self.check_composition([
-                'test one',
-                'test zzzzzzzzzzzw two',
-                'zzzz test three zzzw',
-                ])
+            'test one',
+            'test zzzzzzzzzzzw two',
+            'zzzz test three zzzw',
+        ])
 
 
 class TestCOBSFramer(TestFramer):
@@ -544,11 +544,11 @@ class TestCOBSFramer(TestFramer):
                             '\x02\xff\x00')
 
         self.assertEqual(list(result), [
-                '\x00',
-                '\x11\x22\x00\x33',
-                '\x11\x00\x00\x00',
-                ''.join(chr(i) for i in range(1, 256)),
-                ])
+            '\x00',
+            '\x11\x22\x00\x33',
+            '\x11\x00\x00\x00',
+            ''.join(chr(i) for i in range(1, 256)),
+        ])
         self.assertEqual(s.recv_buf, '')
         self.assertEqual(s._other, self.clear_state)
 
@@ -561,8 +561,8 @@ class TestCOBSFramer(TestFramer):
         result = f.frameify(s, '\x02\xff\x00\x01\x01')
 
         self.assertEqual(list(result), [
-                ''.join(chr(i) for i in range(1, 256)),
-                ])
+            ''.join(chr(i) for i in range(1, 256)),
+        ])
         self.assertEqual(s.recv_buf, '\x01\x01')
         self.assertEqual(s._other, self.clear_state)
 
@@ -583,11 +583,11 @@ class TestCOBSFramer(TestFramer):
                             '\x00')
 
         self.assertEqual(list(result), [
-                '\x00',
-                '\x11\x22\x00\x33',
-                '\x11\x00\x00\x00',
-                ''.join(chr(i) for i in range(1, 256)),
-                ])
+            '\x00',
+            '\x11\x22\x00\x33',
+            '\x11\x00\x00\x00',
+            ''.join(chr(i) for i in range(1, 256)),
+        ])
         self.assertEqual(s.recv_buf, '')
         self.assertEqual(s._other, self.clear_state)
 
@@ -602,8 +602,8 @@ class TestCOBSFramer(TestFramer):
                             '\x00\xe1')
 
         self.assertEqual(list(result), [
-                ''.join(chr(i) for i in range(1, 256)),
-                ])
+            ''.join(chr(i) for i in range(1, 256)),
+        ])
         self.assertEqual(s.recv_buf, '\xe1')
         self.assertEqual(s._other, self.clear_state)
 
@@ -655,16 +655,16 @@ class TestCOBSFramer(TestFramer):
 
     def test_composition(self):
         self.check_composition([
-                '\x00',
-                '\x11\x22\x00\x33',
-                '\x11\x00\x00\x00',
-                ''.join(chr(i) for i in range(1, 256)),
-                ])
+            '\x00',
+            '\x11\x22\x00\x33',
+            '\x11\x00\x00\x00',
+            ''.join(chr(i) for i in range(1, 256)),
+        ])
 
     def test_composition_zpe(self):
         self.check_composition([
-                '\x00',
-                '\x11\x22\x00\x33',
-                '\x11\x00\x00\x00',
-                ''.join(chr(i) for i in range(1, 256)),
-                ], True)
+            '\x00',
+            '\x11\x22\x00\x33',
+            '\x11\x00\x00\x00',
+            ''.join(chr(i) for i in range(1, 256)),
+        ], True)
