@@ -191,7 +191,7 @@ class TCPTendril(connection.Tendril):
         # Notify the application what happened
         self.closed(exception)
 
-    def wrap(wrapper):
+    def wrap(self, wrapper):
         """
         Allows the underlying socket to be wrapped, as by an SSL
         connection.
@@ -237,7 +237,7 @@ class TCPTendril(connection.Tendril):
         Sends a frame to the other end of the connection.
         """
 
-        self._sendbuf += self._send_frameify(frame)
+        self._sendbuf += self._send_streamify(frame)
         self._sendbuf_event.set()
 
     def close(self):
@@ -296,7 +296,7 @@ class TCPTendrilManager(manager.TendrilManager):
         """
 
         # Call some common sanity-checks
-        super(TCPTendrilManager, self).connect(target, accept, wrapper)
+        super(TCPTendrilManager, self).connect(target, acceptor, wrapper)
 
         # Set up the socket
         sock = socket.socket(self.addr_family, socket.SOCK_STREAM)
@@ -377,7 +377,7 @@ class TCPTendrilManager(manager.TendrilManager):
 
             # Call any wrappers
             if wrapper:
-                sock = wraper(sock)
+                sock = wrapper(sock)
 
             # Initiate listening
             sock.listen(self.backlog)
@@ -398,7 +398,7 @@ class TCPTendrilManager(manager.TendrilManager):
         err_thresh = 0
         while True:
             try:
-                cli, addr = serv.accept()
+                cli, addr = sock.accept()
 
                 # OK, the connection has been accepted; construct a
                 # Tendril for it
