@@ -654,7 +654,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     def test_listener_acceptor(self, mock_TCPTendril, mock_track_tendril,
                                mock_socket, mock_sleep):
         clis = [mock.Mock(), mock.Mock(), mock.Mock()]
-        mock_socket.return_value.accept.side_effect=[
+        mock_socket.return_value.accept.side_effect = [
             (clis[0], ('127.0.0.2', 8082)),
             (clis[1], ('127.0.0.3', 8083)),
             (clis[2], ('127.0.0.4', 8084)),
@@ -740,7 +740,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                 'close.side_effect': socket.error(),
             })
         ]
-        mock_socket.return_value.accept.side_effect=[
+        mock_socket.return_value.accept.side_effect = [
             (clis[0], ('127.0.0.2', 8082)),
             (clis[1], ('127.0.0.3', 8083)),
             (clis[2], ('127.0.0.4', 8084)),
@@ -842,7 +842,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     def test_listener_err_thresh(self, mock_TCPTendril, mock_track_tendril,
                                  mock_socket, mock_sleep):
         clis = [mock.Mock(), mock.Mock(), mock.Mock()]
-        mock_socket.return_value.accept.side_effect=[
+        mock_socket.return_value.accept.side_effect = [
             TestException(),
             TestException(),
             TestException(),
