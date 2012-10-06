@@ -360,6 +360,9 @@ class TCPTendrilManager(manager.TendrilManager):
 
         # If we have no acceptor, there's nothing for us to do here
         if not acceptor:
+            # Not listening on anything
+            self.local_addr = None
+
             # Just sleep in a loop
             while True:
                 gevent.sleep(600)
@@ -374,6 +377,9 @@ class TCPTendrilManager(manager.TendrilManager):
 
             # Bind to our endpoint
             sock.bind(self.endpoint)
+
+            # Get the assigned port number
+            self.local_addr = sock.getsockname()
 
             # Call any wrappers
             if wrapper:

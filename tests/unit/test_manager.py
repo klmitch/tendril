@@ -16,6 +16,7 @@
 
 import unittest
 
+from gevent import event
 import mock
 import pkg_resources
 
@@ -42,6 +43,9 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(tm.endpoint, ('', 0))
         self.assertEqual(tm.tendrils, {})
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertIsInstance(tm._local_addr_event, event.Event)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(tm._listen_thread, None)
         self.assertEqual(tm._manager_key, ('test', ('', 0)))
         self.assertEqual(dict(manager.TendrilManager._managers), {
@@ -56,6 +60,9 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(tm.endpoint, ('127.0.0.1', 8080))
         self.assertEqual(tm.tendrils, {})
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertIsInstance(tm._local_addr_event, event.Event)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(tm._listen_thread, None)
         self.assertEqual(tm._manager_key, ('test', ('127.0.0.1', 8080)))
         self.assertEqual(dict(manager.TendrilManager._managers), {
@@ -237,10 +244,14 @@ class TestTendrilManager(unittest.TestCase):
     @mock.patch('gevent.spawn')
     def test_start(self, mock_spawn):
         tm = ManagerForTest()
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event.set()
 
         tm.start('acceptor', 'wrapper')
 
         self.assertEqual(tm.running, True)
+        self.assertEqual(tm._local_addr, None)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(manager.TendrilManager._running_managers, {
             tm._manager_key: tm,
         })
@@ -251,26 +262,36 @@ class TestTendrilManager(unittest.TestCase):
     def test_stop(self):
         tm = ManagerForTest()
         tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event.set()
         manager.TendrilManager._running_managers[tm._manager_key] = tm
 
         tm.stop()
 
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(manager.TendrilManager._running_managers, {})
 
     def test_stop_desync(self):
         tm = ManagerForTest()
         tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event.set()
 
         tm.stop()
 
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(manager.TendrilManager._running_managers, {})
 
     def test_shutdown(self):
         listen_thread = mock.Mock()
         tm = ManagerForTest()
         tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event.set()
         tm._listen_thread = listen_thread
         manager.TendrilManager._running_managers[tm._manager_key] = tm
 
@@ -278,6 +299,8 @@ class TestTendrilManager(unittest.TestCase):
 
         self.assertEqual(tm.tendrils, {})
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(tm._listen_thread, None)
         listen_thread.kill.assert_called_once_with()
 
@@ -285,12 +308,16 @@ class TestTendrilManager(unittest.TestCase):
         listen_thread = mock.Mock()
         tm = ManagerForTest()
         tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event.set()
         tm._listen_thread = listen_thread
 
         tm.shutdown()
 
         self.assertEqual(tm.tendrils, {})
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(tm._listen_thread, None)
         listen_thread.kill.assert_called_once_with()
 
@@ -310,6 +337,8 @@ class TestTendrilManager(unittest.TestCase):
 
         tm = ManagerForTest()
         tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event.set()
         tm.tendrils.update(dict((t._tendril_key, t) for t in tendrils))
         tm._listen_thread = listen_thread
         manager.TendrilManager._running_managers[tm._manager_key] = tm
@@ -318,7 +347,64 @@ class TestTendrilManager(unittest.TestCase):
 
         self.assertEqual(tm.tendrils, {})
         self.assertEqual(tm.running, False)
+        self.assertEqual(tm._local_addr, None)
+        self.assertFalse(tm._local_addr_event.is_set())
         self.assertEqual(tm._listen_thread, None)
         listen_thread.kill.assert_called_once_with()
         for tend in tendrils:
             tend.close.assert_called_once_with()
+
+    def test_get_local_addr_notrunning(self):
+        tm = ManagerForTest()
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event = mock.Mock()
+
+        result = tm.get_local_addr()
+
+        self.assertEqual(result, None)
+        self.assertFalse(tm._local_addr_event.wait.called)
+        self.assertFalse(tm._local_addr_event.is_set.called)
+
+    def test_get_local_addr_notset(self):
+        tm = ManagerForTest()
+        tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event = mock.Mock(**{
+            'is_set.return_value': False,
+        })
+
+        result = tm.get_local_addr('timeout')
+
+        self.assertEqual(result, None)
+        tm._local_addr_event.wait.assert_called_once_with('timeout')
+        tm._local_addr_event.is_set.assert_called_once_with()
+
+    def test_get_local_addr(self):
+        tm = ManagerForTest()
+        tm.running = True
+        tm._local_addr = ('127.0.0.1', 8080)
+        tm._local_addr_event = mock.Mock(**{
+            'is_set.return_value': True,
+        })
+
+        result = tm.get_local_addr()
+
+        self.assertEqual(result, ('127.0.0.1', 8080))
+        tm._local_addr_event.wait.assert_called_once_with(None)
+        tm._local_addr_event.is_set.assert_called_once_with()
+
+    @mock.patch.object(manager.TendrilManager, 'get_local_addr',
+                       return_value=('127.0.0.1', 8080))
+    def test_local_addr_getter(self, mock_get_local_addr):
+        tm = ManagerForTest()
+
+        self.assertEqual(tm.local_addr, ('127.0.0.1', 8080))
+
+    def test_local_addr_setter(self):
+        tm = ManagerForTest()
+        tm._local_addr_event = mock.Mock()
+
+        tm.local_addr = ('127.0.0.1', 8080)
+
+        self.assertEqual(tm._local_addr, ('127.0.0.1', 8080))
+        tm._local_addr_event.set.assert_called_once_with()

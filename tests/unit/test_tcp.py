@@ -477,6 +477,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
     }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
@@ -484,6 +485,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                               mock_socket, mock_sleep):
         acceptor = mock.Mock()
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -493,6 +495,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(1024),
             mock.call.accept(),
             mock.call.accept(),
@@ -506,6 +509,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.accept(),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         self.assertFalse(mock_TCPTendril.called)
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
@@ -513,6 +517,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
     }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
@@ -522,6 +527,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                       mock_sleep):
         acceptor = mock.Mock()
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -531,6 +537,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(4096),
             mock.call.accept(),
             mock.call.accept(),
@@ -544,6 +551,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.accept(),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         self.assertFalse(mock_TCPTendril.called)
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
@@ -551,6 +559,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
     }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
@@ -562,6 +571,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         wrapper = mock.Mock(return_value=wrapped_sock)
         acceptor = mock.Mock()
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, wrapper)
@@ -571,6 +581,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
         ])
         wrapper.assert_called_once_with(mock_socket.return_value)
         wrapped_sock.assert_has_calls([
@@ -587,6 +598,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.accept(),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         self.assertFalse(mock_TCPTendril.called)
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
@@ -594,6 +606,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
         'listen.side_effect': TestException(),
     }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
@@ -602,6 +615,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                mock_socket, mock_sleep):
         acceptor = mock.Mock()
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -611,9 +625,11 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(1024),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         self.assertFalse(mock_TCPTendril.called)
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
@@ -621,6 +637,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
         'listen.side_effect': TestException(),
         'close.side_effect': socket.error(),
     }))
@@ -631,6 +648,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                        mock_sleep):
         acceptor = mock.Mock()
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -643,12 +661,15 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.listen(1024),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         self.assertFalse(mock_TCPTendril.called)
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
     @mock.patch('gevent.sleep', side_effect=TestException())
-    @mock.patch.object(socket, 'socket', return_value=mock.Mock())
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril')
     def test_listener_acceptor(self, mock_TCPTendril, mock_track_tendril,
@@ -677,6 +698,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.Mock(),
         ])
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -686,6 +708,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(1024),
             mock.call.accept(),
             mock.call.accept(),
@@ -702,6 +725,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.accept(),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         mock_TCPTendril.assert_has_calls([
             mock.call(manager, clis[0], ('127.0.0.2', 8082)),
             mock.call(manager, clis[1], ('127.0.0.3', 8083)),
@@ -722,6 +746,7 @@ class TestTCPTendrilManager(unittest.TestCase):
 
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
         'close.side_effect': socket.error(),
     }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
@@ -763,6 +788,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.Mock(),
         ])
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -772,6 +798,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(1024),
             mock.call.accept(),
             mock.call.accept(),
@@ -788,6 +815,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.accept(),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         mock_TCPTendril.assert_has_calls([
             mock.call(manager, clis[0], ('127.0.0.2', 8082)),
             mock.call(manager, clis[1], ('127.0.0.3', 8083)),
@@ -809,6 +837,7 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
         'listen.side_effect': TestException(),
         'close.side_effect': socket.error(),
     }))
@@ -819,6 +848,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                        mock_sleep):
         acceptor = mock.Mock()
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -828,15 +858,19 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(1024),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         self.assertFalse(mock_TCPTendril.called)
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
     @mock.patch('gevent.sleep', side_effect=TestException())
-    @mock.patch.object(socket, 'socket', return_value=mock.Mock())
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril')
     def test_listener_err_thresh(self, mock_TCPTendril, mock_track_tendril,
@@ -866,6 +900,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.Mock(),
         ])
         manager = tcp.TCPTendrilManager()
+        manager.running = True
 
         with self.assertRaises(TestException):
             manager.listener(acceptor, None)
@@ -875,6 +910,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_socket.return_value.assert_has_calls([
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
+            mock.call.getsockname(),
             mock.call.listen(1024),
             mock.call.accept(),
             mock.call.accept(),
@@ -892,6 +928,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.accept(),
             mock.call.close(),
         ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
         mock_TCPTendril.assert_has_calls([
             mock.call(manager, clis[0], ('127.0.0.2', 8082)),
             mock.call(manager, clis[1], ('127.0.0.3', 8083)),

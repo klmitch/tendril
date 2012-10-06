@@ -18,6 +18,7 @@ import abc
 import weakref
 
 import gevent
+from gevent import event
 import pkg_resources
 
 from tendril import utils
@@ -133,6 +134,9 @@ class TendrilManager(object):
         self.addr_family = utils.addr_info(self.endpoint)
         self.tendrils = {}
         self.running = False
+        self._local_addr = None
+        self._local_addr_event = event.Event()
+        self._local_addr_event.clear()
 
         self._listen_thread = None
 
@@ -214,6 +218,8 @@ class TendrilManager(object):
 
         # In a moment, we will begin running
         self.running = True
+        self._local_addr = None
+        self._local_addr_event.clear()
 
         # Add ourself to the dictionary of running managers
         self._running_managers[self._manager_key] = self
@@ -242,6 +248,8 @@ class TendrilManager(object):
             pass
 
         self.running = False
+        self._local_addr = None
+        self._local_addr_event.clear()
 
     def shutdown(self):
         """
@@ -265,7 +273,34 @@ class TendrilManager(object):
         # Ensure all data is appropriately reset
         self.tendrils = {}
         self.running = False
+        self._local_addr = None
+        self._local_addr_event.clear()
         self._listen_thread = None
+
+    def get_local_addr(self, timeout=None):
+        """
+        Retrieve the current local address.
+
+        :param timeout: If not given or given as ``None``, waits until
+                        the local address is available.  Otherwise,
+                        waits for as long as specified.  If the local
+                        address is not set by the time the timeout
+                        expires, returns ``None``.
+        """
+
+        # If we're not running, just return None
+        if not self.running:
+            return None
+
+        # OK, we're running; wait on the _local_addr_event
+        self._local_addr_event.wait(timeout)
+
+        # If it's still not set, return None
+        if not self._local_addr_event.is_set():
+            return None
+
+        # We have a local address!
+        return self._local_addr
 
     @property
     def _manager_key(self):
@@ -274,6 +309,24 @@ class TendrilManager(object):
         """
 
         return (self.proto, self.endpoint)
+
+    @property
+    def local_addr(self):
+        """
+        Retrieve the local address the manager is listening on.
+        """
+
+        return self.get_local_addr()
+
+    @local_addr.setter
+    def local_addr(self, value):
+        """
+        Set the local address the manager is listening on.  Notifies
+        all waiters that the address is available.
+        """
+
+        self._local_addr = value
+        self._local_addr_event.set()
 
     @abc.abstractmethod
     def connect(self, target, acceptor, wrapper=None):
