@@ -1,5 +1,6 @@
 /.coverage
 /cov_html
 /Tendril.egg-info
+/.tox
 *.egg
 *.py[co]
