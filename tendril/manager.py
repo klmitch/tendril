@@ -147,6 +147,17 @@ class TendrilManager(object):
         # Save a reference to ourself
         self._managers[self._manager_key] = self
 
+    def __contains__(self, addr):
+        """
+        Finds if a tendril corresponding to the address tuple exists.
+        Returns ``True`` if it does or ``False`` otherwise.
+
+        The address tuple is the tuple of the local address and the
+        remote address for the tendril.
+        """
+
+        return addr in self.tendrils
+
     def __getitem__(self, addr):
         """
         Finds the tendril corresponding to the address tuple.  Returns

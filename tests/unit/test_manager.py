@@ -178,6 +178,16 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(tm.tendrils, {})
         self.assertFalse('test' in manager.TendrilManager._tendrils)
 
+    def test_contains(self):
+        tm = ManagerForTest()
+        tendril = mock.Mock(proto='test',
+                            _tendril_key=(('127.0.0.1', 8080),
+                                          ('127.0.0.2', 8880)))
+        tm.tendrils[tendril._tendril_key] = tendril
+
+        self.assertTrue((('127.0.0.1', 8080), ('127.0.0.2', 8880)) in tm)
+        self.assertFalse((('127.0.0.1', 8080), ('127.0.0.3', 8880)) in tm)
+
     def test_getitem(self):
         tm = ManagerForTest()
         tendril = mock.Mock(proto='test',
