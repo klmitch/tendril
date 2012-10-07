@@ -17,7 +17,16 @@
 import abc
 
 
-__all__ = ["Application"]
+__all__ = ["Application", "RejectConnection"]
+
+
+class RejectConnection(Exception):
+    """
+    Exception that can be raised by an acceptor to signal that the
+    connection is rejected and should be closed.
+    """
+
+    pass
 
 
 class Application(object):

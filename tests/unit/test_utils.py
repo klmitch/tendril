@@ -152,6 +152,25 @@ class TestSocketCloser(unittest.TestCase):
         closer = utils.SocketCloser('sock')
 
         self.assertEqual(closer.sock, 'sock')
+        self.assertEqual(closer.err_thresh, 0)
+        self.assertEqual(closer.errors, None)
+        self.assertEqual(closer.ignore, frozenset())
+
+    def test_init_err_thresh(self):
+        closer = utils.SocketCloser('sock', 10)
+
+        self.assertEqual(closer.sock, 'sock')
+        self.assertEqual(closer.err_thresh, 10)
+        self.assertEqual(closer.errors, 0)
+        self.assertEqual(closer.ignore, frozenset())
+
+    def test_init_ignore(self):
+        closer = utils.SocketCloser('sock', ignore=[TestException])
+
+        self.assertEqual(closer.sock, 'sock')
+        self.assertEqual(closer.err_thresh, 0)
+        self.assertEqual(closer.errors, None)
+        self.assertEqual(closer.ignore, frozenset([TestException]))
 
     def test_enter(self):
         closer = utils.SocketCloser('sock')
@@ -163,25 +182,106 @@ class TestSocketCloser(unittest.TestCase):
         sock = mock.Mock()
         closer = utils.SocketCloser(sock)
 
-        closer.__exit__(None, None, None)
+        result = closer.__exit__(None, None, None)
 
+        self.assertEqual(result, None)
         self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, None)
 
     def test_exit_error(self):
         sock = mock.Mock()
         closer = utils.SocketCloser(sock)
 
-        closer.__exit__(TestException, TestException('foo'), [])
+        result = closer.__exit__(TestException, TestException('foo'), [])
 
+        self.assertEqual(result, None)
         sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, None)
 
-    def test_exit_error_closeerror(self):
+    def test_exit_ignore(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock, ignore=[TestException])
+
+        result = closer.__exit__(TestException, TestException('foo'), [])
+
+        self.assertEqual(result, True)
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, None)
+
+    def test_exit_kill(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock)
+
+        result = closer.__exit__(gevent.GreenletExit, gevent.GreenletExit(),
+                                 [])
+
+        self.assertEqual(result, None)
+        sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, None)
+
+    def test_exit_closeerror(self):
         sock = mock.Mock(**{'close.side_effect': socket.error()})
         closer = utils.SocketCloser(sock)
 
-        closer.__exit__(TestException, TestException('foo'), [])
+        result = closer.__exit__(TestException, TestException('foo'), [])
 
+        self.assertEqual(result, None)
         sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, None)
+
+    def test_exit_noerror_thresh(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock, 10)
+        closer.errors = 5
+
+        result = closer.__exit__(None, None, None)
+
+        self.assertEqual(result, None)
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, 4)
+
+    def test_exit_error_thresh(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock, 1)
+
+        result = closer.__exit__(TestException, TestException('foo'), [])
+
+        self.assertEqual(result, True)
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, 1)
+
+        result = closer.__exit__(TestException, TestException('foo'), [])
+
+        self.assertEqual(result, None)
+        sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, 1)
+
+    def test_exit_kill_thresh(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock, 10)
+
+        result = closer.__exit__(gevent.GreenletExit, gevent.GreenletExit(),
+                                 [])
+
+        self.assertEqual(result, None)
+        sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, 0)
+
+    def test_exit_closeerror_thresh(self):
+        sock = mock.Mock(**{'close.side_effect': socket.error()})
+        closer = utils.SocketCloser(sock, 1)
+
+        result = closer.__exit__(TestException, TestException('foo'), [])
+
+        self.assertEqual(result, True)
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, 1)
+
+        result = closer.__exit__(TestException, TestException('foo'), [])
+
+        self.assertEqual(result, None)
+        sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, 1)
 
     def test_together_noerror(self):
         sock = mock.Mock()
@@ -203,6 +303,17 @@ class TestSocketCloser(unittest.TestCase):
         sock.make_call.assert_called_once_with()
         sock.close.assert_called_once_with()
 
+    def test_together_kill(self):
+        sock = mock.Mock()
+
+        with self.assertRaises(gevent.GreenletExit):
+            with utils.SocketCloser(sock):
+                sock.make_call()
+                raise gevent.GreenletExit()
+
+        sock.make_call.assert_called_once_with()
+        sock.close.assert_called_once_with()
+
     def test_together_closeerror(self):
         sock = mock.Mock(**{'close.side_effect': socket.error()})
 
@@ -214,13 +325,73 @@ class TestSocketCloser(unittest.TestCase):
         sock.make_call.assert_called_once_with()
         sock.close.assert_called_once_with()
 
-    def test_together_greenletexit(self):
+    def test_together_noerror_thresh(self):
         sock = mock.Mock()
+        closer = utils.SocketCloser(sock, 10)
+        closer.errors = 5
+
+        with closer:
+            sock.make_call()
+
+        sock.make_call.assert_called_once_with()
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, 4)
+
+    def test_together_error_thresh(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock, 1)
+
+        with closer:
+            sock.make_call()
+            raise TestException('spam')
+
+        sock.make_call.assert_called_once_with()
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, 1)
+
+        sock.reset_mock()
+
+        with self.assertRaises(TestException):
+            with closer:
+                sock.make_call()
+                raise TestException('spam')
+
+        sock.make_call.assert_called_once_with()
+        sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, 1)
+
+    def test_together_kill_thresh(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock, 10)
 
         with self.assertRaises(gevent.GreenletExit):
-            with utils.SocketCloser(sock):
+            with closer:
                 sock.make_call()
                 raise gevent.GreenletExit()
 
         sock.make_call.assert_called_once_with()
         sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, 0)
+
+    def test_together_closeerror_thresh(self):
+        sock = mock.Mock(**{'close.side_effect': socket.error()})
+        closer = utils.SocketCloser(sock, 1)
+
+        with closer:
+            sock.make_call()
+            raise TestException('spam')
+
+        sock.make_call.assert_called_once_with()
+        self.assertFalse(sock.close.called)
+        self.assertEqual(closer.errors, 1)
+
+        sock.reset_mock()
+
+        with self.assertRaises(TestException):
+            with closer:
+                sock.make_call()
+                raise TestException('spam')
+
+        sock.make_call.assert_called_once_with()
+        sock.close.assert_called_once_with()
+        self.assertEqual(closer.errors, 1)

@@ -162,10 +162,21 @@ class SocketCloser(object):
     Context manager that ensures a socket is closed.
     """
 
-    def __init__(self, sock):
-        """Initialize the SocketCloser."""
+    def __init__(self, sock, err_thresh=0, ignore=None):
+        """
+        Initialize the SocketCloser.
+
+        :param sock: The socket to be closed in the event of an error.
+        :param err_thresh: The maximum number of errors to allow
+                           before the socket is closed.  If not given
+                           or given as 0, no error counting behavior
+                           will be used.
+        """
 
         self.sock = sock
+        self.err_thresh = err_thresh
+        self.errors = 0 if err_thresh > 0 else None
+        self.ignore = frozenset(ignore) if ignore else frozenset()
 
     def __enter__(self):
         """Enter the context.  Returns the SocketCloser."""
@@ -175,11 +186,37 @@ class SocketCloser(object):
     def __exit__(self, exc_type, exc_value, exc_tb):
         """
         Exit the context.  If an exception was raised, ensures that
-        the socket is closed.
+        the socket is closed.  If the error threshold logic is enabled
+        by passing a non-zero value for err_thresh to the initializer,
+        socket will only be closed if the exception is not an
+        Exception (i.e., a BaseException) or if the error threshold is
+        exceeded.
         """
 
         if exc_type:
+            # Skip ignored errors
+            if exc_type in self.ignore:
+                return True
+
+            # An error occurred; handle threshold counting logic: if
+            # we're doing error threshold and the error is not a
+            # BaseException (like GreenletExit) and the count of
+            # errors is less than the error threshold, we declare the
+            # exception handled.
+            if (self.errors is not None and
+                    issubclass(exc_type, Exception) and
+                    self.errors < self.err_thresh):
+                # Increment the error count
+                self.errors += 1
+
+                return True
+
+            # OK, a legitimate error occurred; ensure the socket gets
+            # closed
             try:
                 self.sock.close()
             except Exception:
                 pass
+        elif self.errors:
+            # No error occurred, so decrement the error count
+            self.errors -= 1

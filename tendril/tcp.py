@@ -21,6 +21,7 @@ import gevent
 from gevent import coros
 from gevent import event
 
+from tendril import application
 from tendril import connection
 from tendril import framers
 from tendril import manager
@@ -301,7 +302,7 @@ class TCPTendrilManager(manager.TendrilManager):
         # Set up the socket
         sock = socket.socket(self.addr_family, socket.SOCK_STREAM)
 
-        with utils.SocketCloser(sock):
+        with utils.SocketCloser(sock, ignore=[application.RejectConnection]):
             # Bind to our endpoint
             sock.bind(self.endpoint)
 
@@ -318,11 +319,14 @@ class TCPTendrilManager(manager.TendrilManager):
             # Finally, set up the application
             tend.application = acceptor(tend)
 
-        # OK, let's track the tendril
-        self._track_tendril(tend)
+            # OK, let's track the tendril
+            self._track_tendril(tend)
 
-        # Might as well return the tendril, too
-        return tend
+            # Might as well return the tendril, too
+            return tend
+
+        # The acceptor raised a RejectConnection exception, apparently
+        return None
 
     def listener(self, acceptor, wrapper):
         """
@@ -376,10 +380,11 @@ class TCPTendrilManager(manager.TendrilManager):
             # Initiate listening
             sock.listen(self.backlog)
 
-        # OK, now go into an accept loop
-        err_thresh = 0
+        # OK, now go into an accept loop with an error threshold of 10
+        closer = utils.SocketCloser(sock, 10,
+                                    ignore=[application.RejectConnection])
         while True:
-            try:
+            with closer:
                 cli, addr = sock.accept()
 
                 # OK, the connection has been accepted; construct a
@@ -389,25 +394,7 @@ class TCPTendrilManager(manager.TendrilManager):
                 # Set up the application
                 with utils.SocketCloser(cli):
                     tend.application = acceptor(tend)
-            except Exception:
-                # Do something if we're in an error loop
-                err_thresh += 1
-                if err_thresh >= 10:
-                    # What comes next may overwrite the exception, so
-                    # save it for reraise later...
-                    exc_class, exc_value, exc_tb = sys.exc_info()
 
-                    # Make sure the socket is closed
-                    try:
-                        sock.close()
-                    except Exception:
-                        pass
-
-                    raise exc_class, exc_value, exc_tb
-                continue
-
-            # Decrement the error threshold
-            err_thresh = max(err_thresh - 1, 0)
-
-            # Make sure we track the new tendril
-            self._track_tendril(tend)
+                    # Make sure we track the new tendril, but only if
+                    # the acceptor doesn't throw any exceptions
+                    self._track_tendril(tend)
