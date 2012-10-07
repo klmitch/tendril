@@ -304,10 +304,8 @@ class TendrilManager(object):
             return None
 
         # OK, we're running; wait on the _local_addr_event
-        self._local_addr_event.wait(timeout)
-
-        # If it's still not set, return None
-        if not self._local_addr_event.is_set():
+        if not self._local_addr_event.wait(timeout):
+            # Still not set after timeout
             return None
 
         # We have a local address!

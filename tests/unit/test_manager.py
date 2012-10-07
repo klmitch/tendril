@@ -380,28 +380,26 @@ class TestTendrilManager(unittest.TestCase):
         tm.running = True
         tm._local_addr = ('127.0.0.1', 8080)
         tm._local_addr_event = mock.Mock(**{
-            'is_set.return_value': False,
+            'wait.return_value': False,
         })
 
         result = tm.get_local_addr('timeout')
 
         self.assertEqual(result, None)
         tm._local_addr_event.wait.assert_called_once_with('timeout')
-        tm._local_addr_event.is_set.assert_called_once_with()
 
     def test_get_local_addr(self):
         tm = ManagerForTest()
         tm.running = True
         tm._local_addr = ('127.0.0.1', 8080)
         tm._local_addr_event = mock.Mock(**{
-            'is_set.return_value': True,
+            'wait.return_value': True,
         })
 
         result = tm.get_local_addr()
 
         self.assertEqual(result, ('127.0.0.1', 8080))
         tm._local_addr_event.wait.assert_called_once_with(None)
-        tm._local_addr_event.is_set.assert_called_once_with()
 
     @mock.patch.object(manager.TendrilManager, 'get_local_addr',
                        return_value=('127.0.0.1', 8080))
