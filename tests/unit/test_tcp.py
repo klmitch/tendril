@@ -22,6 +22,7 @@ from gevent import coros
 from gevent import event
 import mock
 
+from tendril import application
 from tendril import framers
 from tendril import manager
 from tendril import tcp
@@ -461,6 +462,32 @@ class TestTCPTendrilManager(unittest.TestCase):
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         self.assertFalse(mock_track_tendril.called)
 
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock())
+    @mock.patch.object(manager.TendrilManager, 'connect')
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
+    def test_connect_reject_connection(self, mock_TCPTendril,
+                                       mock_track_tendril, mock_connect,
+                                       mock_socket):
+        acceptor = mock.Mock(side_effect=application.RejectConnection)
+        manager = tcp.TCPTendrilManager()
+
+        tend = manager.connect(('127.0.0.1', 8080), acceptor)
+
+        self.assertEqual(tend, None)
+        mock_connect.assert_called_once_with(('127.0.0.1', 8080), acceptor,
+                                             None)
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.connect(('127.0.0.1', 8080)),
+            mock.call.close(),
+        ])
+        mock_TCPTendril.assert_called_once_with(manager,
+                                                mock_socket.return_value)
+        acceptor.assert_called_once_with(mock_TCPTendril.return_value)
+        self.assertFalse(mock_track_tendril.called)
+
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock())
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
@@ -749,6 +776,80 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call(tendrils[0]),
             mock.call(tendrils[2]),
         ])
+
+    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(tcp, 'TCPTendril')
+    def test_listener_acceptor_reject_connection(self, mock_TCPTendril,
+                                                 mock_track_tendril,
+                                                 mock_socket, mock_sleep):
+        clis = [mock.Mock(), mock.Mock(), mock.Mock()]
+        mock_socket.return_value.accept.side_effect = [
+            (clis[0], ('127.0.0.2', 8082)),
+            (clis[1], ('127.0.0.3', 8083)),
+            (clis[2], ('127.0.0.4', 8084)),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+        ]
+        tendrils = [mock.Mock(), mock.Mock(), mock.Mock()]
+        mock_TCPTendril.side_effect = tendrils[:]
+        acceptor = mock.Mock(side_effect=application.RejectConnection())
+        manager = tcp.TCPTendrilManager()
+        manager.running = True
+
+        with self.assertRaises(TestException):
+            manager.listener(acceptor, None)
+
+        self.assertFalse(mock_sleep.called)
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.listen(1024),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.accept(),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        mock_TCPTendril.assert_has_calls([
+            mock.call(manager, clis[0], ('127.0.0.2', 8082)),
+            mock.call(manager, clis[1], ('127.0.0.3', 8083)),
+            mock.call(manager, clis[2], ('127.0.0.4', 8084)),
+        ])
+        acceptor.assert_has_calls([
+            mock.call(tendrils[0]),
+            mock.call(tendrils[1]),
+            mock.call(tendrils[2]),
+        ])
+        clis[0].close.assert_called_once_with()
+        clis[1].close.assert_called_once_with()
+        clis[2].close.assert_called_once_with()
+        self.assertFalse(mock_track_tendril.called)
 
     @mock.patch('gevent.sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
