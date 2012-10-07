@@ -23,6 +23,10 @@ from tendril import connection
 from tendril import framers
 
 
+class TestException(Exception):
+    pass
+
+
 class TendrilForTest(connection.Tendril):
     proto = 'test'
 
@@ -82,6 +86,16 @@ class TestTendril(unittest.TestCase):
     def test_closed_withapp(self):
         tend = TendrilForTest('manager', 'local', 'remote')
         tend._application = mock.Mock()
+
+        tend.closed('error')
+
+        tend._application.closed.assert_called_once_with('error')
+
+    def test_closed_witherrorapp(self):
+        tend = TendrilForTest('manager', 'local', 'remote')
+        tend._application = mock.Mock(**{
+            'closed.side_effect': TestException()
+        })
 
         tend.closed('error')
 

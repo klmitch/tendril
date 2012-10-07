@@ -176,7 +176,11 @@ class Tendril(object):
         """
 
         if self._application:
-            self._application.closed(error)
+            try:
+                self._application.closed(error)
+            except Exception:
+                # Ignore exceptions from the notification
+                pass
 
     @property
     def _tendril_key(self):
