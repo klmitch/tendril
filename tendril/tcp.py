@@ -18,8 +18,8 @@ import socket
 import sys
 
 import gevent
-from gevent import event
 from gevent import coros
+from gevent import event
 
 from tendril import connection
 from tendril import framers
