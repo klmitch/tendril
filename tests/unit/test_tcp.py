@@ -439,8 +439,9 @@ class TestTCPTendrilManager(unittest.TestCase):
     @mock.patch.object(manager.TendrilManager, 'connect')
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
-    def test_connect_failure(self, mock_TCPTendril, mock_track_tendril,
-                             mock_connect, mock_socket):
+    def test_connect_failure_closeerror(self, mock_TCPTendril,
+                                        mock_track_tendril, mock_connect,
+                                        mock_socket):
         acceptor = mock.Mock(side_effect=TestException())
         manager = tcp.TCPTendrilManager()
 
@@ -661,38 +662,6 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
             mock.call.bind(('', 0)),
             mock.call.getsockname(),
-            mock.call.listen(1024),
-            mock.call.close(),
-        ])
-        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
-        self.assertFalse(mock_TCPTendril.called)
-        self.assertFalse(acceptor.called)
-        self.assertFalse(mock_track_tendril.called)
-
-    @mock.patch('gevent.sleep', side_effect=TestException())
-    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
-        'accept.side_effect': TestException(),
-        'getsockname.return_value': ('127.0.0.1', 8080),
-        'listen.side_effect': TestException(),
-        'close.side_effect': socket.error(),
-    }))
-    @mock.patch.object(manager.TendrilManager, '_track_tendril')
-    @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
-    def test_listener_nolisten_noclose(self, mock_TCPTendril,
-                                       mock_track_tendril, mock_socket,
-                                       mock_sleep):
-        acceptor = mock.Mock()
-        manager = tcp.TCPTendrilManager()
-        manager.running = True
-
-        with self.assertRaises(TestException):
-            manager.listener(acceptor, None)
-
-        self.assertFalse(mock_sleep.called)
-        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
-        mock_socket.return_value.assert_has_calls([
-            mock.call.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1),
-            mock.call.bind(('', 0)),
             mock.call.listen(1024),
             mock.call.close(),
         ])
