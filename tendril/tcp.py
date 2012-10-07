@@ -326,6 +326,7 @@ class TCPTendrilManager(manager.TendrilManager):
             return tend
 
         # The acceptor raised a RejectConnection exception, apparently
+        sock.close()
         return None
 
     def listener(self, acceptor, wrapper):
