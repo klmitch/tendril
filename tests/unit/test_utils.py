@@ -17,6 +17,7 @@
 import socket
 import unittest
 
+import gevent
 import mock
 
 from tendril import utils
@@ -140,3 +141,86 @@ class TestAddrInfo(unittest.TestCase):
 
     def test_reject_unknown(self):
         self.assertRaises(ValueError, utils.addr_info, ('unknown', 8080))
+
+
+class TestException(Exception):
+    pass
+
+
+class TestSocketCloser(unittest.TestCase):
+    def test_init(self):
+        closer = utils.SocketCloser('sock')
+
+        self.assertEqual(closer.sock, 'sock')
+
+    def test_enter(self):
+        closer = utils.SocketCloser('sock')
+        result = closer.__enter__()
+
+        self.assertEqual(closer, result)
+
+    def test_exit_noerror(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock)
+
+        closer.__exit__(None, None, None)
+
+        self.assertFalse(sock.close.called)
+
+    def test_exit_error(self):
+        sock = mock.Mock()
+        closer = utils.SocketCloser(sock)
+
+        closer.__exit__(TestException, TestException('foo'), [])
+
+        sock.close.assert_called_once_with()
+
+    def test_exit_error_closeerror(self):
+        sock = mock.Mock(**{'close.side_effect': socket.error()})
+        closer = utils.SocketCloser(sock)
+
+        closer.__exit__(TestException, TestException('foo'), [])
+
+        sock.close.assert_called_once_with()
+
+    def test_together_noerror(self):
+        sock = mock.Mock()
+
+        with utils.SocketCloser(sock):
+            sock.make_call()
+
+        sock.make_call.assert_called_once_with()
+        self.assertFalse(sock.close.called)
+
+    def test_together_error(self):
+        sock = mock.Mock()
+
+        with self.assertRaises(TestException):
+            with utils.SocketCloser(sock):
+                sock.make_call()
+                raise TestException('spam')
+
+        sock.make_call.assert_called_once_with()
+        sock.close.assert_called_once_with()
+
+    def test_together_closeerror(self):
+        sock = mock.Mock(**{'close.side_effect': socket.error()})
+
+        with self.assertRaises(TestException):
+            with utils.SocketCloser(sock):
+                sock.make_call()
+                raise TestException('spam')
+
+        sock.make_call.assert_called_once_with()
+        sock.close.assert_called_once_with()
+
+    def test_together_greenletexit(self):
+        sock = mock.Mock()
+
+        with self.assertRaises(gevent.GreenletExit):
+            with utils.SocketCloser(sock):
+                sock.make_call()
+                raise gevent.GreenletExit()
+
+        sock.make_call.assert_called_once_with()
+        sock.close.assert_called_once_with()

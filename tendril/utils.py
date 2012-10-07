@@ -20,7 +20,7 @@ import socket
 import netaddr
 
 
-__all__ = ["TendrilPartial", "WrapperChain", "addr_info"]
+__all__ = ["TendrilPartial", "WrapperChain", "addr_info", "SocketCloser"]
 
 
 class TendrilPartial(object):
@@ -155,3 +155,31 @@ def addr_info(addr):
         return socket.AF_INET
 
     raise ValueError("cannot understand address")
+
+
+class SocketCloser(object):
+    """
+    Context manager that ensures a socket is closed.
+    """
+
+    def __init__(self, sock):
+        """Initialize the SocketCloser."""
+
+        self.sock = sock
+
+    def __enter__(self):
+        """Enter the context.  Returns the SocketCloser."""
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        """
+        Exit the context.  If an exception was raised, ensures that
+        the socket is closed.
+        """
+
+        if exc_type:
+            try:
+                self.sock.close()
+            except Exception:
+                pass

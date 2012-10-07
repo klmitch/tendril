@@ -25,6 +25,7 @@ from gevent import coros
 from tendril import connection
 from tendril import framers
 from tendril import manager
+from tendril import utils
 
 
 class TCPTendril(connection.Tendril):
@@ -301,7 +302,7 @@ class TCPTendrilManager(manager.TendrilManager):
         # Set up the socket
         sock = socket.socket(self.addr_family, socket.SOCK_STREAM)
 
-        try:
+        with utils.SocketCloser(sock):
             # Bind to our endpoint
             sock.bind(self.endpoint)
 
@@ -317,18 +318,6 @@ class TCPTendrilManager(manager.TendrilManager):
 
             # Finally, set up the application
             tend.application = acceptor(tend)
-        except Exception:
-            # What comes next may overwrite the exception, so save it
-            # for reraise later...
-            exc_class, exc_value, exc_tb = sys.exc_info()
-
-            # Make sure the socket is closed
-            try:
-                sock.close()
-            except Exception:
-                pass
-
-            raise exc_class, exc_value, exc_tb
 
         # OK, let's track the tendril
         self._track_tendril(tend)
@@ -371,7 +360,7 @@ class TCPTendrilManager(manager.TendrilManager):
         # OK, set up the socket
         sock = socket.socket(self.addr_family, socket.SOCK_STREAM)
 
-        try:
+        with utils.SocketCloser(sock):
             # Set up SO_REUSEADDR
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -387,18 +376,6 @@ class TCPTendrilManager(manager.TendrilManager):
 
             # Initiate listening
             sock.listen(self.backlog)
-        except Exception:
-            # What comes next may overwrite the exception, so save it
-            # for reraise later...
-            exc_class, exc_value, exc_tb = sys.exc_info()
-
-            # Make sure the socket is closed
-            try:
-                sock.close()
-            except Exception:
-                pass
-
-            raise exc_class, exc_value, exc_tb
 
         # OK, now go into an accept loop
         err_thresh = 0
@@ -411,20 +388,8 @@ class TCPTendrilManager(manager.TendrilManager):
                 tend = TCPTendril(self, cli, addr)
 
                 # Set up the application
-                try:
+                with utils.SocketCloser(cli):
                     tend.application = acceptor(tend)
-                except Exception:
-                    # What comes next may overwrite the exception, so
-                    # save it for reraise later...
-                    exc_class, exc_value, exc_tb = sys.exc_info()
-
-                    # Make sure the connection is closed
-                    try:
-                        cli.close()
-                    except Exception:
-                        pass
-
-                    raise exc_class, exc_value, exc_tb
             except Exception:
                 # Do something if we're in an error loop
                 err_thresh += 1
