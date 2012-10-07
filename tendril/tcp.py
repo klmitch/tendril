@@ -16,7 +16,6 @@
 
 import socket
 import sys
-import time
 
 import gevent
 from gevent import event
