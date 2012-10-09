@@ -14,12 +14,12 @@
 ## along with this program.  If not, see
 ## <http://www.gnu.org/licenses/>.
 
-import socket
 import unittest
 
 import gevent
 from gevent import coros
 from gevent import event
+from gevent import socket
 import mock
 
 from tendril import application

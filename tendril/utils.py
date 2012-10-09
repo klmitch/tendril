@@ -15,7 +15,8 @@
 ## <http://www.gnu.org/licenses/>.
 
 import collections
-import socket
+
+from gevent import socket
 
 import netaddr
 
