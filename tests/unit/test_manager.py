@@ -16,6 +16,7 @@
 
 import unittest
 
+import gevent
 from gevent import event
 import mock
 import pkg_resources
@@ -77,7 +78,7 @@ class TestTendrilManager(unittest.TestCase):
 
         self.assertRaises(ValueError, ManagerForTest)
 
-    @mock.patch('pkg_resources.iter_entry_points')
+    @mock.patch.object(pkg_resources, 'iter_entry_points')
     def test_get_manager_existing(self, mock_iter_entry_points):
         mock_manager = mock.Mock()
         manager.TendrilManager._managers[('test', ('', 0))] = mock_manager
@@ -87,13 +88,13 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(id(result), id(mock_manager))
         self.assertFalse(mock_iter_entry_points.called)
 
-    @mock.patch('pkg_resources.iter_entry_points')
+    @mock.patch.object(pkg_resources, 'iter_entry_points')
     def test_get_manager_noloader(self, mock_iter_entry_points):
         self.assertRaises(ValueError, manager.get_manager, 'test')
         mock_iter_entry_points.assert_called_once_with('tendril.manager',
                                                        'test')
 
-    @mock.patch('pkg_resources.iter_entry_points')
+    @mock.patch.object(pkg_resources, 'iter_entry_points')
     def test_get_manager_failedload(self, mock_iter_entry_points):
         mock_iter_entry_points.return_value = [
             mock.Mock(**{"load.side_effect": TypeError}),
@@ -103,7 +104,7 @@ class TestTendrilManager(unittest.TestCase):
         mock_iter_entry_points.assert_called_once_with('tendril.manager',
                                                        'test')
 
-    @mock.patch('pkg_resources.iter_entry_points')
+    @mock.patch.object(pkg_resources, 'iter_entry_points')
     def test_get_manager(self, mock_iter_entry_points):
         loader = mock.Mock()
         mock_iter_entry_points.return_value = [
@@ -120,7 +121,7 @@ class TestTendrilManager(unittest.TestCase):
             m.load.assert_called_once_with()
         loader.assert_called_once_with(('', 0))
 
-    @mock.patch('pkg_resources.iter_entry_points')
+    @mock.patch.object(pkg_resources, 'iter_entry_points')
     def test_get_manager_endpoint(self, mock_iter_entry_points):
         loader = mock.Mock()
         mock_iter_entry_points.return_value = [
@@ -231,7 +232,7 @@ class TestTendrilManager(unittest.TestCase):
 
         # Note: verifying that an exception is not raised
 
-    @mock.patch('gevent.spawn')
+    @mock.patch.object(gevent, 'spawn')
     def test_start_running(self, mock_spawn):
         tm = ManagerForTest()
         tm.running = True
@@ -240,7 +241,7 @@ class TestTendrilManager(unittest.TestCase):
         self.assertEqual(manager.TendrilManager._running_managers, {})
         self.assertFalse(mock_spawn.called)
 
-    @mock.patch('gevent.spawn')
+    @mock.patch.object(gevent, 'spawn')
     def test_start_identical(self, mock_spawn):
         tm = ManagerForTest()
         manager.TendrilManager._running_managers[tm._manager_key] = tm
@@ -251,7 +252,7 @@ class TestTendrilManager(unittest.TestCase):
         })
         self.assertFalse(mock_spawn.called)
 
-    @mock.patch('gevent.spawn')
+    @mock.patch.object(gevent, 'spawn')
     def test_start(self, mock_spawn):
         tm = ManagerForTest()
         tm._local_addr = ('127.0.0.1', 8080)

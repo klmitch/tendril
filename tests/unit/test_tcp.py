@@ -23,6 +23,7 @@ from gevent import socket
 import mock
 
 from tendril import application
+from tendril import connection
 from tendril import framers
 from tendril import manager
 from tendril import tcp
@@ -73,7 +74,7 @@ class TestTCPTendril(unittest.TestCase):
         self.sock.getsockname.assert_called_once_with()
         self.sock.getpeername.assert_called_once_with()
 
-    @mock.patch('gevent.spawn')
+    @mock.patch.object(gevent, 'spawn')
     def test_start(self, mock_spawn):
         recv_thread = mock.Mock()
         send_thread = mock.Mock()
@@ -91,10 +92,10 @@ class TestTCPTendril(unittest.TestCase):
         recv_thread.link.assert_called_once_with(tend._thread_error)
         send_thread.link.assert_called_once_with(tend._thread_error)
 
-    @mock.patch('tendril.connection.Tendril.close')
+    @mock.patch.object(connection.Tendril, 'close')
     @mock.patch.object(tcp.TCPTendril, '_recv_frameify')
     @mock.patch.object(tcp.TCPTendril, 'closed')
-    @mock.patch('gevent.sleep')
+    @mock.patch.object(gevent, 'sleep')
     def test_recv(self, mock_sleep, mock_closed, mock_recv_frameify,
                   mock_close):
         self.sock.recv.side_effect = ['frame 1', 'frame 2', '']
@@ -123,10 +124,10 @@ class TestTCPTendril(unittest.TestCase):
         mock_recv_frameify.assert_has_calls([mock.call('frame 1'),
                                              mock.call('frame 2')])
 
-    @mock.patch('tendril.connection.Tendril.close')
+    @mock.patch.object(connection.Tendril, 'close')
     @mock.patch.object(tcp.TCPTendril, '_recv_frameify')
     @mock.patch.object(tcp.TCPTendril, 'closed')
-    @mock.patch('gevent.sleep')
+    @mock.patch.object(gevent, 'sleep')
     def test_recv_altbufsize(self, mock_sleep, mock_closed, mock_recv_frameify,
                              mock_close):
         self.sock.recv.side_effect = ['frame 1', 'frame 2', '']
@@ -306,8 +307,8 @@ class TestTCPTendril(unittest.TestCase):
 
         self.assertEqual(id(tend.sock), id(self.sock))
 
-    @mock.patch('tendril.connection.Tendril._send_streamify',
-                return_value='frame1:frame2')
+    @mock.patch.object(connection.Tendril, '_send_streamify',
+                       return_value='frame1:frame2')
     def test_send_frame(self, mock_send_streamify):
         tend = tcp.TCPTendril('manager', self.sock)
         tend._sendbuf_event = mock.Mock()
@@ -317,7 +318,7 @@ class TestTCPTendril(unittest.TestCase):
         mock_send_streamify.assert_called_once_with('a frame')
         tend._sendbuf_event.assert_has_calls([mock.call.set()])
 
-    @mock.patch('tendril.connection.Tendril.close')
+    @mock.patch.object(connection.Tendril, 'close')
     def test_close_nothreads_nosock(self, mock_close):
         tend = tcp.TCPTendril('manager', self.sock)
         tend._sock = None
@@ -326,7 +327,7 @@ class TestTCPTendril(unittest.TestCase):
 
         mock_close.assert_called_once_with()
 
-    @mock.patch('tendril.connection.Tendril.close')
+    @mock.patch.object(connection.Tendril, 'close')
     def test_close_nothreads(self, mock_close):
         tend = tcp.TCPTendril('manager', self.sock)
 
@@ -336,7 +337,7 @@ class TestTCPTendril(unittest.TestCase):
         self.assertEqual(tend._sock, None)
         self.sock.close.assert_called_once_with()
 
-    @mock.patch('tendril.connection.Tendril.close')
+    @mock.patch.object(connection.Tendril, 'close')
     def test_close_threads(self, mock_close):
         tend = tcp.TCPTendril('manager', self.sock)
         recv_thread = mock.Mock()
@@ -488,7 +489,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock())
     @mock.patch.object(manager.TendrilManager, '_track_tendril')
     @mock.patch.object(tcp, 'TCPTendril', return_value=mock.Mock())
@@ -502,7 +503,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         mock_sleep.assert_called_once_with(600)
         self.assertFalse(mock_socket.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
         'getsockname.return_value': ('127.0.0.1', 8080),
@@ -543,7 +544,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
         'getsockname.return_value': ('127.0.0.1', 8080),
@@ -586,7 +587,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': gevent.GreenletExit(),
         'getsockname.return_value': ('127.0.0.1', 8080),
@@ -618,7 +619,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
         'getsockname.return_value': ('127.0.0.1', 8080),
@@ -666,7 +667,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
         'getsockname.return_value': ('127.0.0.1', 8080),
@@ -697,7 +698,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'getsockname.return_value': ('127.0.0.1', 8080),
     }))
@@ -777,7 +778,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call(tendrils[2]),
         ])
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'getsockname.return_value': ('127.0.0.1', 8080),
     }))
@@ -851,7 +852,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         clis[2].close.assert_called_once_with()
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'getsockname.return_value': ('127.0.0.1', 8080),
         'close.side_effect': socket.error(),
@@ -943,7 +944,7 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call(tendrils[2]),
         ])
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'accept.side_effect': TestException(),
         'getsockname.return_value': ('127.0.0.1', 8080),
@@ -976,7 +977,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         self.assertFalse(acceptor.called)
         self.assertFalse(mock_track_tendril.called)
 
-    @mock.patch('gevent.sleep', side_effect=TestException())
+    @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'getsockname.return_value': ('127.0.0.1', 8080),
     }))
