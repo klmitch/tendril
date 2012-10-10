@@ -279,8 +279,7 @@ class TCPTendrilManager(manager.TendrilManager):
         """
         Initiate a connection from the tendril manager's endpoint.
         Once the connection is completed, a TCPTendril object will be
-        created and passed to the given acceptor.  The acceptor should
-        examine the Tendril object to see if any errors occurred.
+        created and passed to the given acceptor.
 
         :param target: The target of the connection attempt.
         :param acceptor: A callable which will initialize the state of
