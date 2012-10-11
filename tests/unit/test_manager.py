@@ -374,7 +374,6 @@ class TestTendrilManager(unittest.TestCase):
 
         self.assertEqual(result, None)
         self.assertFalse(tm._local_addr_event.wait.called)
-        self.assertFalse(tm._local_addr_event.is_set.called)
 
     def test_get_local_addr_notset(self):
         tm = ManagerForTest()
