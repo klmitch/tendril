@@ -381,6 +381,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         mock_track_tendril.assert_called_once_with(
             mock_TCPTendril.return_value)
+        mock_TCPTendril.return_value._start.assert_called_once_with()
         self.assertEqual(id(tend), id(mock_TCPTendril.return_value))
 
     @mock.patch.object(socket, 'socket', return_value=mock.Mock())
@@ -408,6 +409,7 @@ class TestTCPTendrilManager(unittest.TestCase):
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         mock_track_tendril.assert_called_once_with(
             mock_TCPTendril.return_value)
+        mock_TCPTendril.return_value._start.assert_called_once_with()
         self.assertEqual(id(tend), id(mock_TCPTendril.return_value))
 
     @mock.patch.object(socket, 'socket', return_value=mock.Mock())
@@ -434,6 +436,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                                 mock_socket.return_value)
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         self.assertFalse(mock_track_tendril.called)
+        self.assertFalse(mock_TCPTendril.return_value._start.called)
 
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
         'close.side_effect': socket.error(),
@@ -462,6 +465,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                                 mock_socket.return_value)
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         self.assertFalse(mock_track_tendril.called)
+        self.assertFalse(mock_TCPTendril.return_value._start.called)
 
     @mock.patch.object(socket, 'socket', return_value=mock.Mock())
     @mock.patch.object(manager.TendrilManager, 'connect')
@@ -488,6 +492,7 @@ class TestTCPTendrilManager(unittest.TestCase):
                                                 mock_socket.return_value)
         acceptor.assert_called_once_with(mock_TCPTendril.return_value)
         self.assertFalse(mock_track_tendril.called)
+        self.assertFalse(mock_TCPTendril.return_value._start.called)
 
     @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock())
@@ -777,6 +782,9 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call(tendrils[0]),
             mock.call(tendrils[2]),
         ])
+        tendrils[0]._start.assert_called_once_with()
+        self.assertFalse(tendrils[1]._start.called)
+        tendrils[2]._start.assert_called_once_with()
 
     @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
@@ -851,6 +859,9 @@ class TestTCPTendrilManager(unittest.TestCase):
         clis[1].close.assert_called_once_with()
         clis[2].close.assert_called_once_with()
         self.assertFalse(mock_track_tendril.called)
+        self.assertFalse(tendrils[0]._start.called)
+        self.assertFalse(tendrils[1]._start.called)
+        self.assertFalse(tendrils[2]._start.called)
 
     @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
@@ -943,6 +954,9 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call(tendrils[0]),
             mock.call(tendrils[2]),
         ])
+        tendrils[0]._start.assert_called_once_with()
+        self.assertFalse(tendrils[1]._start.called)
+        tendrils[2]._start.assert_called_once_with()
 
     @mock.patch.object(gevent, 'sleep', side_effect=TestException())
     @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
@@ -1058,3 +1072,6 @@ class TestTCPTendrilManager(unittest.TestCase):
             mock.call(tendrils[0]),
             mock.call(tendrils[2]),
         ])
+        tendrils[0]._start.assert_called_once_with()
+        self.assertFalse(tendrils[1]._start.called)
+        tendrils[2]._start.assert_called_once_with()

@@ -319,6 +319,9 @@ class TCPTendrilManager(manager.TendrilManager):
             # OK, let's track the tendril
             self._track_tendril(tend)
 
+            # Start the tendril
+            tend._start()
+
             # Might as well return the tendril, too
             return tend
 
@@ -396,3 +399,6 @@ class TCPTendrilManager(manager.TendrilManager):
                     # Make sure we track the new tendril, but only if
                     # the acceptor doesn't throw any exceptions
                     self._track_tendril(tend)
+
+                    # Start the tendril
+                    tend._start()
