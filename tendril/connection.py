@@ -109,7 +109,7 @@ class Tendril(object):
         framer = self._send_framer
 
         # Reset the state as needed
-        state.reset(framer)
+        state._reset(framer)
 
         # Now pass the frame through streamify() and return the result
         return framer.streamify(state, frame)
@@ -137,7 +137,7 @@ class Tendril(object):
 
                 # Set up the new framer
                 framer = self._recv_framer
-                state.reset(framer)
+                state._reset(framer)
                 frameify = framer.frameify(state, data)
                 data = ''  # Now part of the state's buffer
 

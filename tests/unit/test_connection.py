@@ -340,7 +340,7 @@ class TestTendril(unittest.TestCase):
 
         result = tend._send_streamify('frame')
 
-        tend._send_framer_state.reset.assert_called_once_with(
+        tend._send_framer_state._reset.assert_called_once_with(
             tend._send_framer)
         tend._send_framer.streamify.assert_called_once_with(
             tend._send_framer_state, 'frame')
@@ -357,7 +357,7 @@ class TestTendril(unittest.TestCase):
 
         tend._recv_frameify("this is a test")
 
-        tend._recv_framer_state.reset.assert_called_once_with(
+        tend._recv_framer_state._reset.assert_called_once_with(
             tend._recv_framer)
         tend._recv_framer.frameify.assert_called_once_with(
             tend._recv_framer_state, 'this is a test')
@@ -407,7 +407,7 @@ class TestTendril(unittest.TestCase):
 
         tend._recv_frameify("this is a test")
 
-        tend._recv_framer_state.reset.assert_has_calls([
+        tend._recv_framer_state._reset.assert_has_calls([
             mock.call(framers['switch0']),
             mock.call(framers['switch1']),
             mock.call(framers['switch2']),
