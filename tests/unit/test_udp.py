@@ -18,6 +18,7 @@ import unittest
 
 import gevent
 from gevent import event
+from gevent import socket
 import mock
 
 from tendril import application
@@ -156,3 +157,426 @@ class TestUDPTendrilManager(unittest.TestCase):
         acceptor.assert_called_once_with(mock_UDPTendril.return_value)
         self.assertFalse(mock_track_tendril.called)
         self.assertEqual(tend, None)
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'recvfrom.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_creator(self, mock_UDPTendril, mock_track_tendril,
+                              mock_socket):
+        acceptor = mock.Mock()
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+
+        with self.assertRaises(TestException):
+            manager.listener(acceptor, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        self.assertFalse(mock_UDPTendril.called)
+        self.assertFalse(acceptor.called)
+        self.assertFalse(mock_track_tendril.called)
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'recvfrom.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    @mock.patch.object(udp.UDPTendrilManager, 'recv_bufsize', 8192)
+    def test_listener_creator_recv_bufsize(self, mock_UDPTendril,
+                                           mock_track_tendril, mock_socket):
+        acceptor = mock.Mock()
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+
+        with self.assertRaises(TestException):
+            manager.listener(acceptor, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.recvfrom(8192),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        self.assertFalse(mock_UDPTendril.called)
+        self.assertFalse(acceptor.called)
+        self.assertFalse(mock_track_tendril.called)
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'recvfrom.side_effect': gevent.GreenletExit(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
+        'close.side_effect': socket.error(),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_killed(self, mock_UDPTendril, mock_track_tendril,
+                             mock_socket):
+        acceptor = mock.Mock()
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+
+        with self.assertRaises(gevent.GreenletExit):
+            manager.listener(acceptor, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        self.assertFalse(mock_UDPTendril.called)
+        self.assertFalse(acceptor.called)
+        self.assertFalse(mock_track_tendril.called)
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'recvfrom.side_effect': TestException(),
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_wrapper(self, mock_UDPTendril, mock_track_tendril,
+                              mock_socket):
+        wrapped_sock = mock.Mock(**{
+            'recvfrom.side_effect': TestException(),
+        })
+        wrapper = mock.Mock(return_value=wrapped_sock)
+        acceptor = mock.Mock()
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+
+        with self.assertRaises(TestException):
+            manager.listener(acceptor, wrapper)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+        ])
+        wrapper.assert_called_once_with(mock_socket.return_value)
+        wrapped_sock.assert_has_calls([
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        self.assertFalse(mock_UDPTendril.called)
+        self.assertFalse(acceptor.called)
+        self.assertFalse(mock_track_tendril.called)
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_noacceptor(self, mock_UDPTendril, mock_track_tendril,
+                                 mock_socket):
+        msgs = ['msg1', 'msg2', 'msg3']
+        mock_socket.return_value.recvfrom.side_effect = [
+            (msgs[0], ('127.0.0.2', 8082)),
+            (msgs[1], ('127.0.0.3', 8083)),
+            (msgs[2], ('127.0.0.4', 8084)),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+        ]
+        tend = mock.Mock()
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+        manager.tendrils[(('127.0.0.1', 8080), ('127.0.0.3', 8083))] = tend
+
+        with self.assertRaises(TestException):
+            manager.listener(None, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        self.assertFalse(mock_UDPTendril.called)
+        self.assertFalse(mock_track_tendril.called)
+        tend._recv_frameify.assert_called_once_with('msg2')
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_recv_frameify_error(self, mock_UDPTendril,
+                                          mock_track_tendril, mock_socket):
+        mock_socket.return_value.recvfrom.side_effect = [
+            ('frame', ('127.0.0.3', 8083)),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+        ]
+        tend = mock.Mock(**{'_recv_frameify.side_effect': TestException()})
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+        manager.tendrils[(('127.0.0.1', 8080), ('127.0.0.3', 8083))] = tend
+
+        with self.assertRaises(TestException):
+            manager.listener(None, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        self.assertFalse(mock_UDPTendril.called)
+        self.assertFalse(mock_track_tendril.called)
+        tend._recv_frameify.assert_called_once_with('frame')
+        tend.close.assert_called_once_with()
+        self.assertEqual(tend.closed.call_count, 1)
+
+        args = tend.closed.call_args[0]
+        self.assertEqual(len(args), 1)
+        self.assertIsInstance(args[0], TestException)
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_acceptor(self, mock_UDPTendril, mock_track_tendril,
+                               mock_socket):
+        msgs = ['msg1', 'msg2', 'msg3']
+        mock_socket.return_value.recvfrom.side_effect = [
+            (msgs[0], ('127.0.0.2', 8082)),
+            (msgs[1], ('127.0.0.3', 8083)),
+            (msgs[2], ('127.0.0.4', 8084)),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+        ]
+        tendrils = [mock.Mock(), mock.Mock(), mock.Mock()]
+        mock_UDPTendril.side_effect = [tendrils[0], tendrils[2]]
+        acceptor = mock.Mock()
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+        manager.tendrils[(('127.0.0.1', 8080),
+                          ('127.0.0.3', 8083))] = tendrils[1]
+
+        with self.assertRaises(TestException):
+            manager.listener(acceptor, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        mock_UDPTendril.assert_has_calls([
+            mock.call(manager, ('127.0.0.1', 8080), ('127.0.0.2', 8082)),
+            mock.call(manager, ('127.0.0.1', 8080), ('127.0.0.4', 8084)),
+        ])
+        acceptor.assert_has_calls([
+            mock.call(tendrils[0]),
+            mock.call(tendrils[2]),
+        ])
+        mock_track_tendril.assert_has_calls([
+            mock.call(tendrils[0]),
+            mock.call(tendrils[2]),
+        ])
+        tendrils[0]._recv_frameify.assert_called_once_with('msg1')
+        tendrils[1]._recv_frameify.assert_called_once_with('msg2')
+        tendrils[2]._recv_frameify.assert_called_once_with('msg3')
+
+    @mock.patch.object(socket, 'socket', return_value=mock.Mock(**{
+        'getsockname.return_value': ('127.0.0.1', 8080),
+    }))
+    @mock.patch.object(manager.TendrilManager, '_track_tendril')
+    @mock.patch.object(udp, 'UDPTendril', return_value=mock.Mock())
+    def test_listener_rejector(self, mock_UDPTendril, mock_track_tendril,
+                               mock_socket):
+        mock_socket.return_value.recvfrom.side_effect = [
+            ('msg1', ('127.0.0.2', 8082)),
+            ('msg2', ('127.0.0.3', 8083)),
+            ('msg3', ('127.0.0.4', 8084)),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+            TestException(),
+        ]
+        tendrils = [mock.Mock(), mock.Mock(), mock.Mock()]
+        mock_UDPTendril.side_effect = tendrils[:]
+        acceptor = mock.Mock(side_effect=application.RejectConnection())
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+
+        with self.assertRaises(TestException):
+            manager.listener(acceptor, None)
+
+        mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket.return_value.assert_has_calls([
+            mock.call.bind(('', 0)),
+            mock.call.getsockname(),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.recvfrom(4096),
+            mock.call.close(),
+        ])
+        self.assertEqual(manager.local_addr, ('127.0.0.1', 8080))
+        mock_UDPTendril.assert_has_calls([
+            mock.call(manager, ('127.0.0.1', 8080), ('127.0.0.2', 8082)),
+            mock.call(manager, ('127.0.0.1', 8080), ('127.0.0.3', 8083)),
+            mock.call(manager, ('127.0.0.1', 8080), ('127.0.0.4', 8084)),
+        ])
+        acceptor.assert_has_calls([
+            mock.call(tendrils[0]),
+            mock.call(tendrils[1]),
+            mock.call(tendrils[2]),
+        ])
+        self.assertFalse(mock_track_tendril.called)
+        self.assertFalse(tendrils[0]._recv_frameify.called)
+        self.assertFalse(tendrils[1]._recv_frameify.called)
+        self.assertFalse(tendrils[2]._recv_frameify.called)
+
+    def test_sock_getter_notrunning(self):
+        manager = udp.UDPTendrilManager()
+        manager._sock = 'socket'
+        manager._sock_event = mock.Mock()
+
+        result = manager.sock
+
+        self.assertEqual(result, None)
+        self.assertFalse(manager._sock_event.wait.called)
+
+    def test_sock_getter(self):
+        manager = udp.UDPTendrilManager()
+        manager.running = True
+        manager._sock = 'socket'
+        manager._sock_event = mock.Mock()
+
+        result = manager.sock
+
+        self.assertEqual(result, 'socket')
+        manager._sock_event.wait.assert_called_once_with()
