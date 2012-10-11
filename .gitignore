@@ -3,4 +3,5 @@
 /Tendril.egg-info
 /.tox
 *.egg
+*.log
 *.py[co]
