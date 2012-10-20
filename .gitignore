@@ -1,5 +1,7 @@
+/build
 /.coverage
 /cov_html
+/dist
 /Tendril.egg-info
 /.tox
 *.egg
