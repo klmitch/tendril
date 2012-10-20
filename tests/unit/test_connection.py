@@ -369,6 +369,22 @@ class TestTendril(unittest.TestCase):
             mock.call('frame4'),
         ])
 
+    def test_recv_frameify_noapplication(self):
+        generator = mock.Mock(**{'next.side_effect': ['frame1', 'frame2',
+                                                      'frame3', 'frame4',
+                                                      StopIteration]})
+        tend = TendrilForTest('manager', 'local', 'remote')
+        tend._recv_framer_state = mock.Mock()
+        tend._recv_framer = mock.Mock(**{'frameify.return_value': generator})
+
+        tend._recv_frameify("this is a test")
+
+        tend._recv_framer_state._reset.assert_called_once_with(
+            tend._recv_framer)
+        tend._recv_framer.frameify.assert_called_once_with(
+            tend._recv_framer_state, 'this is a test')
+        self.assertEqual(generator.next.call_count, 5)
+
     def test_recv_frameify_switch(self):
         class Switcher(object):
             def __init__(inst, tend, framers):
