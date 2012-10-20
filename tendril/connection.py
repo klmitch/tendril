@@ -359,7 +359,7 @@ class Tendril(object):
     def send_frame(self, frame):
         """Send a frame on the connection."""
 
-        pass
+        pass  # Pragma: nocover
 
     @abc.abstractmethod
     def close(self):
@@ -375,4 +375,4 @@ class Tendril(object):
     def proto(self):
         """Retrieve the name of the underlying network protocol."""
 
-        pass
+        pass  # Pragma: nocover

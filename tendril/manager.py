@@ -392,13 +392,13 @@ class TendrilManager(object):
                         communicate on the connection.
         """
 
-        pass
+        pass  # Pragma: nocover
 
     @abc.abstractproperty
     def proto(self):
         """Retrieve the name of the underlying network protocol."""
 
-        pass
+        pass  # Pragma: nocover
 
 
 get_manager = TendrilManager.get_manager

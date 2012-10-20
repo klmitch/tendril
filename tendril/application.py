@@ -85,4 +85,4 @@ class Application(object):
         arrange for the frame processing to occur in parallel.
         """
 
-        pass
+        pass  # Pragma: nocover

@@ -148,7 +148,7 @@ class Framer(object):
         if the framer is changed.
         """
 
-        yield
+        yield  # Pragma: nocover
 
     @abc.abstractmethod
     def streamify(self, state, frame):
@@ -156,7 +156,7 @@ class Framer(object):
         Convert a frame into stream data.  Returns the data.
         """
 
-        pass
+        pass  # Pragma: nocover
 
 
 class IdentityFramer(Framer):
