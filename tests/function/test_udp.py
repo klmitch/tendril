@@ -15,7 +15,6 @@
 ## <http://www.gnu.org/licenses/>.
 
 from tests.function import base
-from tests.function import server
 
 
 class TestUDPFunction(base.TestBasicFunction):

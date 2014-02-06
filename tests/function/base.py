@@ -23,9 +23,6 @@ import mock
 import tendril
 from tendril import manager
 
-from tests.function import client
-from tests.function import server
-
 
 class EchoApplicationClient(tendril.Application):
     def __init__(self, parent):
