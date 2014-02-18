@@ -398,6 +398,19 @@ class TestStructFramer(TestFramer):
         self.assertEqual(s.recv_buf, 'sp')
         self.assertEqual(s._other, dict(frame_len=5))
 
+    def test_frameify_fractured(self):
+        f = self.framer_class('!B')
+        s = framers.FrameState()
+        s._reset(f)
+        frame = self.make_frame('spam', 4)
+        s.frame_len = 4
+
+        result = f.frameify(s, frame[1:])
+
+        self.assertEqual(list(result), ['spam'])
+        self.assertEqual(s.recv_buf, '')
+        self.assertEqual(s._other, self.clear_state)
+
     def test_frameify_buffered_len(self):
         f = self.framer_class('<i')
         s = framers.FrameState()
@@ -463,6 +476,18 @@ class TestStuffingFramer(TestFramer):
         result = f.frameify(s, 'zzzzthis is a testzzzwzzzzdid it work?zzzw')
 
         self.assertEqual(list(result), ['this is a test', 'did it work?'])
+        self.assertEqual(s.recv_buf, '')
+        self.assertEqual(s._other, self.clear_state)
+
+    def test_frameify_started(self):
+        f = self.framer_class(prefix='zzz', begin='z', end='w', nop='a')
+        s = framers.FrameState()
+        s._reset(f)
+        s.frame_start = True
+
+        result = f.frameify(s, 'zzzzthis is a testzzzw')
+
+        self.assertEqual(list(result), ['zzzzthis is a test'])
         self.assertEqual(s.recv_buf, '')
         self.assertEqual(s._other, self.clear_state)
 

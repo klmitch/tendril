@@ -359,7 +359,7 @@ class TCPTendrilManager(manager.TendrilManager):
             # Just sleep in a loop
             while True:
                 gevent.sleep(600)
-            return
+            return  # Pragma: nocover
 
         # OK, set up the socket
         sock = socket.socket(self.addr_family, socket.SOCK_STREAM)
